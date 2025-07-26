@@ -1,6 +1,6 @@
-﻿namespace bank_accounts.Features.Transactions.Models
+﻿namespace bank_accounts.Features.Transactions.Entities
 {
-    public class Transaction
+    public class Transaction : IEntity
     {
         public Guid Id { get; set; }
         public Guid AccountId { get; set; }

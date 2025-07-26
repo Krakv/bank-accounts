@@ -1,9 +1,11 @@
-﻿using bank_accounts.Features.Abstract;
+﻿using bank_accounts.Features;
+using bank_accounts.Features.Abstract;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace bank_accounts.Infrastructure.Repository
 {
-    public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
+    public class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class, IEntity
     {
         private readonly AppDbContext _context;
         private readonly DbSet<TEntity> _dbSet;
@@ -17,6 +19,7 @@ namespace bank_accounts.Infrastructure.Repository
         public async Task CreateAsync(TEntity entity)
         {
             await _dbSet.AddAsync(entity);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<TEntity?> GetByIdAsync(Guid guid)
@@ -42,10 +45,23 @@ namespace bank_accounts.Infrastructure.Repository
             return (data, totalCount);
         }
 
-        public Task UpdateAsync(TEntity entity)
+        public async Task UpdateAsync(TEntity entity)
         {
             _dbSet.Update(entity);
-            return Task.CompletedTask;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdatePartialAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty>> propertyExpression)
+        {
+            var existingEntity = _context.Find<TEntity>(entity.Id);
+            if (existingEntity != null)
+            {
+                _context.Entry(existingEntity).State = EntityState.Detached;
+            }
+
+            _dbSet.Attach(entity);
+            _context.Entry(entity).Property(propertyExpression).IsModified = true;
+            await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(Guid guid)
@@ -55,6 +71,7 @@ namespace bank_accounts.Infrastructure.Repository
             {
                 _dbSet.Remove(entity);
             }
+            await _context.SaveChangesAsync();
         }
 
         public async Task SaveChangesAsync()

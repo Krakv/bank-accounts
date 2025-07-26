@@ -1,6 +1,6 @@
-﻿using bank_accounts.Features.Accounts.Models;
+﻿using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Dtos;
-using bank_accounts.Features.Transactions.Models;
+using bank_accounts.Features.Transactions.Entities;
 
 namespace bank_accounts.Features.Transactions
 {
@@ -45,7 +45,7 @@ namespace bank_accounts.Features.Transactions
                 ?? throw new AccountNotFoundException(dto.CounterpartyAccountId.Value);
 
             if (account.Currency != counterparty.Currency)
-                throw new CurrencyMismatchException(account.Currency.ToString(), counterparty.Currency.ToString());
+                throw new CurrencyMismatchException(account.Currency, counterparty.Currency);
 
             if (account.Balance < dto.Value)
                 throw new InsufficientFundsException(dto.AccountId);
@@ -57,7 +57,7 @@ namespace bank_accounts.Features.Transactions
                 CounterpartyAccountId = dto.CounterpartyAccountId,
                 Currency = dto.Currency,
                 Value = dto.Value,
-                Type = "Credit",
+                Type = "Debit",
                 Description = dto.Description
             };
 
@@ -68,7 +68,7 @@ namespace bank_accounts.Features.Transactions
                 CounterpartyAccountId = dto.AccountId,
                 Currency = dto.Currency,
                 Value = dto.Value,
-                Type = "Debit",
+                Type = "Credit",
                 Description = dto.Description
             };
 
@@ -85,8 +85,8 @@ namespace bank_accounts.Features.Transactions
 
         private async Task<TransactionDto> ProcessSingleTransactionAsync(CreateTransactionDto dto, Account account)
         {
-            if (account.Currency.ToString() != dto.Currency)
-                throw new CurrencyMismatchException(account.Currency.ToString(), dto.Currency);
+            if (account.Currency != dto.Currency)
+                throw new CurrencyMismatchException(account.Currency, dto.Currency);
 
             if (dto.Type == "Credit" && account.Balance < dto.Value)
                 throw new InsufficientFundsException(dto.AccountId);
@@ -103,8 +103,8 @@ namespace bank_accounts.Features.Transactions
             };
 
             account.Balance = dto.Type == "Debit"
-                ? account.Balance + dto.Value
-                : account.Balance - dto.Value;
+                ? account.Balance - dto.Value
+                : account.Balance + dto.Value;
 
             await _unitOfWork.Transactions.CreateAsync(transaction);
             await _unitOfWork.Accounts.UpdateAsync(account);
@@ -119,7 +119,7 @@ namespace bank_accounts.Features.Transactions
             CounterpartyAccountId = transaction.CounterpartyAccountId,
             Currency = transaction.Currency,
             Value = transaction.Value,
-            Type = transaction.Type.ToString(),
+            Type = transaction.Type,
             Description = transaction.Description,
             Date = transaction.Date
         };
@@ -134,7 +134,7 @@ namespace bank_accounts.Features.Transactions
                 CounterpartyAccountId = transaction.CounterpartyAccountId,
                 Currency = transaction.Currency,
                 Value = transaction.Value,
-                Type = transaction.Type.ToString(),
+                Type = transaction.Type,
                 Description = transaction.Description,
                 Date = transaction.Date
             } : null;

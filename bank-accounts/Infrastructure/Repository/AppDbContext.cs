@@ -1,5 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Models;
-using bank_accounts.Features.Transactions.Models;
+﻿using bank_accounts.Features.Accounts.Entities;
+using bank_accounts.Features.Transactions.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 

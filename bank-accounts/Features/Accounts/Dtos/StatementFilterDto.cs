@@ -1,5 +1,5 @@
 ﻿using bank_accounts.Features.Abstract;
-using bank_accounts.Features.Transactions.Models;
+using bank_accounts.Features.Transactions.Entities;
 
 namespace bank_accounts.Features.Accounts.Dtos
 {

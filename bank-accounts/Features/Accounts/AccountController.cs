@@ -1,31 +1,49 @@
-﻿using bank_accounts.Features.Accounts.Dtos;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.CreateAccount;
+using bank_accounts.Features.Accounts.DeleteAccount;
+using bank_accounts.Features.Accounts.Dtos;
+using bank_accounts.Features.Accounts.GetAccount;
+using bank_accounts.Features.Accounts.GetAccounts;
+using bank_accounts.Features.Accounts.GetAccountStatement;
+using bank_accounts.Features.Accounts.UpdateAccount;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace bank_accounts.Features.Accounts
 {
     [Route("[controller]")]
     [ApiController]
-    public class AccountsController(IAccountService accountService, ILogger<AccountsController> logger) : ControllerBase
+    public class AccountsController(ILogger<AccountsController> logger, IMediator mediator) : ControllerBase
     {
-        private readonly IAccountService _accountService = accountService;
         private readonly ILogger<AccountsController> _logger = logger;
+        private readonly IMediator _mediator = mediator;
 
         [HttpPost]
-        public async Task<IActionResult> PostAccount([FromBody] PostAccountDto accountDto)
+        public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto createAccountDto)
         {
             try
             {
-                var account = await _accountService.CreateAccountAsync(accountDto);
+                var id = await _mediator.Send(new CreateAccountCommand(createAccountDto), CancellationToken.None);
+
                 return CreatedAtAction(
-                    actionName: nameof(GetAccount),
-                    routeValues: new { id = account.Id },
-                    value: account
+                    nameof(GetAccount),
+                    new { id = id },
+                    null
                 );
+            }
+            catch (ValidationAppException ex)
+            {
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to Post new Account.");
-                return BadRequest(ex.Message);
+                return StatusCode(500, "Internal server error");
             }
         }
 
@@ -34,24 +52,22 @@ namespace bank_accounts.Features.Accounts
         {
             try
             {
-                var account = await _accountService.GetAccountAsync(id);
-                var accountDto = account == null ? null : new AccountDto
-                {
-                    Id = account.Id,
-                    OwnerId = account.OwnerId,
-                    Type = account.Type,
-                    Currency = account.Currency,
-                    Balance = account.Balance,
-                    InterestRate = account.InterestRate,
-                    OpeningDate = account.OpeningDate,
-                    ClosingDate = account.ClosingDate
-                };
+                var accountDto = await _mediator.Send(new GetAccountQuery(id), CancellationToken.None);
                 return accountDto == null ? NotFound() : Ok(accountDto);
+            }
+            catch (ValidationAppException ex)
+            {
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting account {Id}", id);
-                return BadRequest(ex.Message);
+                return StatusCode(500, "Internal server error");
             }
         }
 
@@ -65,45 +81,28 @@ namespace bank_accounts.Features.Accounts
                     return BadRequest(ModelState);
                 }
 
-                var (accounts, totalCount) = await _accountService.GetAccountsAsync(filter);
-
-                var accountsDto = accounts == null
-                    ? null
-                    : accounts.Select(account => new AccountDto
-                    {
-                        Id = account.Id,
-                        OwnerId = account.OwnerId,
-                        Type = account.Type,
-                        Currency = account.Currency,
-                        Balance = account.Balance,
-                        InterestRate = account.InterestRate,
-                        OpeningDate = account.OpeningDate,
-                        ClosingDate = account.ClosingDate
-                    });
-
-                var result = new
-                {
-                    accountsDto,
-                    pagination = new
-                    {
-                        filter.Page,
-                        filter.PageSize,
-                        totalCount,
-                        totalPages = (int)Math.Ceiling((double)totalCount / filter.PageSize)
-                    }
-                };
+                var result = await _mediator.Send(new GetAccountsQuery(filter), CancellationToken.None);
 
                 return Ok(result);
+            }
+            catch (ValidationAppException ex)
+            {
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get filtered accounts");
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, "Internal server error");
             }
         }
 
         [HttpPatch("{id}")]
-        public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateInterestRateDto updateDto)
+        public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateAccountDto updateDto)
         {
             try
             {
@@ -112,20 +111,25 @@ namespace bank_accounts.Features.Accounts
                     return BadRequest(ModelState);
                 }
 
-                var account = await _accountService.UpdateInterestRateAsync(id, updateDto);
-                return Ok(account);
+                var account = await _mediator.Send(new GetAccountQuery(id), CancellationToken.None);
+
+                if (account == null)
+                {
+                    return NotFound("Account was not found");
+                }
+
+                await _mediator.Send(new UpdateAccountCommand(id, updateDto, account.Type), CancellationToken.None);
+
+                return Ok();
             }
-            catch (KeyNotFoundException ex)
+            catch (ValidationAppException ex)
             {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {
@@ -139,16 +143,17 @@ namespace bank_accounts.Features.Accounts
         {
             try
             {
-                var account = await _accountService.CloseAccountAsync(id);
-                return Ok(account);
+                await _mediator.Send(new DeleteAccountCommand(id), CancellationToken.None);
+                return Ok();
             }
-            catch (KeyNotFoundException ex)
+            catch (ValidationAppException ex)
             {
-                return NotFound(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {
@@ -167,19 +172,19 @@ namespace bank_accounts.Features.Accounts
                     return BadRequest(ModelState);
                 }
 
-                if (request.StartDate > request.EndDate)
-                {
-                    return UnprocessableEntity("Start date cannot be after end date");
-                }
-
-                var statement = await _accountService.GetAccountStatementAsync(accountId, request);
-
-                if (statement == null)
-                {
-                    return NotFound("Account not found");
-                }
+                var statement = await _mediator.Send(new GetAccountStatementQuery(accountId, request),
+                    CancellationToken.None);
 
                 return Ok(statement);
+            }
+            catch (ValidationAppException ex)
+            {
+                return BadRequest(new
+                {
+                    title = "Validation errors occurred",
+                    status = StatusCodes.Status400BadRequest,
+                    errors = ex.Errors
+                });
             }
             catch (Exception ex)
             {

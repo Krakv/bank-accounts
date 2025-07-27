@@ -6,119 +6,115 @@ using bank_accounts.Features.Transactions.GetTransaction;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace bank_accounts.Features.Transactions
+namespace bank_accounts.Features.Transactions;
+
+/// <summary>
+/// Контроллер для работы с банковскими транзакциями
+/// </summary>
+/// <remarks>
+/// ### Обрабатываемые операции:
+/// 
+/// - Создание транзакций (пополнения/списания)
+/// - Переводы между счетами 
+/// - Получение информации о транзакциях
+/// </remarks>
+[ApiController]
+[Route("transactions")]
+public class TransactionsController(IMediator mediator, ILogger<TransactionsController> logger) : ControllerBase
 {
     /// <summary>
-    /// Контроллер для работы с банковскими транзакциями
+    /// Создать новую транзакцию
     /// </summary>
     /// <remarks>
-    /// ### Обрабатываемые операции:
+    /// ### Поддерживаемые операции:
     /// 
-    /// - Создание транзакций (пополнения/списания)
-    /// - Переводы между счетами 
-    /// - Получение информации о транзакциях
+    /// 1. **Внутренние операции**  
+    ///    - Пополнения/списания средств  
+    ///    - Параметр: counterpartyAccountId = null
+    /// 
+    /// 2. **Межсчетные переводы**  
+    ///    - Переводы между счетами  
+    ///    - Параметр: counterpartyAccountId (указание счета-получателя)  
+    ///    - Результат: создает парные транзакции (списание + зачисление)
     /// </remarks>
-    [ApiController]
-    [Route("transactions")]
-    public class TransactionsController(IMediator mediator, ILogger<TransactionsController> logger) : ControllerBase
+    /// <response code="201">Транзакция успешно создана</response>
+    /// <response code="400">Невалидные данные запроса</response>
+    /// <response code="404">Счет не найден</response>
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [HttpPost]
+    public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
     {
-        private readonly IMediator _mediator = mediator;
-        private readonly ILogger<TransactionsController> _logger = logger;
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        /// <summary>
-        /// Создать новую транзакцию
-        /// </summary>
-        /// <remarks>
-        /// ### Поддерживаемые операции:
-        /// 
-        /// 1. **Внутренние операции**  
-        ///    - Пополнения/списания средств  
-        ///    - Параметр: counterpartyAccountId = null
-        /// 
-        /// 2. **Межсчетные переводы**  
-        ///    - Переводы между счетами  
-        ///    - Параметр: counterpartyAccountId (указание счета-получателя)  
-        ///    - Результат: создает парные транзакции (списание + зачисление)
-        /// </remarks>
-        /// <response code="201">Транзакция успешно создана</response>
-        /// <response code="400">Невалидные данные запроса</response>
-        /// <response code="404">Счет не найден</response>
-        [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [HttpPost]
-        public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
+        try
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var accountDto = await mediator.Send(new GetAccountQuery(dto.AccountId), CancellationToken.None);
 
-            try
+            if (accountDto == null)
             {
-                var accountDto = await _mediator.Send(new GetAccountQuery(dto.AccountId), CancellationToken.None);
-
-                if (accountDto == null)
-                {
-                    return NotFound("Account was not found");
-                }
-
-                var counterpartyDto = !dto.CounterpartyAccountId.HasValue 
-                    ? null 
-                    : await _mediator.Send(new GetAccountQuery(dto.CounterpartyAccountId.Value), CancellationToken.None);
-
-                var transactionId =
-                    await _mediator.Send(new CreateTransactionCommand(dto, accountDto, counterpartyDto));
-
-                return CreatedAtAction(nameof(GetTransaction), new { id = transactionId }, null);
+                return NotFound("Account was not found");
             }
-            catch (ValidationAppException ex)
-            {
-                return BadRequest(new
-                {
-                    title = "Validation errors occurred",
-                    status = StatusCodes.Status400BadRequest,
-                    errors = ex.Errors
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating transaction");
-                return StatusCode(500, "Internal server error");
-            }
+
+            var counterpartyDto = !dto.CounterpartyAccountId.HasValue 
+                ? null 
+                : await mediator.Send(new GetAccountQuery(dto.CounterpartyAccountId.Value), CancellationToken.None);
+
+            var transactionId =
+                await mediator.Send(new CreateTransactionCommand(dto, accountDto, counterpartyDto));
+
+            return CreatedAtAction(nameof(GetTransaction), new { id = transactionId }, null);
         }
-
-        /// <summary>
-        /// Получить информацию о транзакции по ID
-        /// </summary>
-        /// <remarks>
-        /// Возвращает полные данные о конкретной транзакции по её идентификатору.
-        /// </remarks>
-        /// <param name="id">Идентификатор транзакции (GUID)</param>
-        /// <response code="200">Возвращает данные транзакции</response>
-        /// <response code="400">Невалидный ID транзакции</response>
-        /// <response code="404">Транзакция не найдена</response>
-        /// <response code="500">Ошибка сервера</response>
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(TransactionDto), 200)]
-        public async Task<IActionResult> GetTransaction(Guid id)
+        catch (ValidationAppException ex)
         {
-            try
+            return BadRequest(new
             {
-                var transaction = await _mediator.Send(new GetTransactionQuery(id), CancellationToken.None);
-                return transaction != null ? Ok(transaction) : NotFound("Transaction was not found");
-            }
-            catch (ValidationAppException ex)
+                title = "Validation errors occurred",
+                status = StatusCodes.Status400BadRequest,
+                errors = ex.Errors
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error creating transaction");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Получить информацию о транзакции по ID
+    /// </summary>
+    /// <remarks>
+    /// Возвращает полные данные о конкретной транзакции по её идентификатору.
+    /// </remarks>
+    /// <param name="id">Идентификатор транзакции (GUID)</param>
+    /// <response code="200">Возвращает данные транзакции</response>
+    /// <response code="400">Невалидный ID транзакции</response>
+    /// <response code="404">Транзакция не найдена</response>
+    /// <response code="500">Ошибка сервера</response>
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TransactionDto), 200)]
+    public async Task<IActionResult> GetTransaction(Guid id)
+    {
+        try
+        {
+            var transaction = await mediator.Send(new GetTransactionQuery(id), CancellationToken.None);
+            return transaction != null ? Ok(transaction) : NotFound("Transaction was not found");
+        }
+        catch (ValidationAppException ex)
+        {
+            return BadRequest(new
             {
-                return BadRequest(new
-                {
-                    title = "Validation errors occurred",
-                    status = StatusCodes.Status400BadRequest,
-                    errors = ex.Errors
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting transaction");
-                return StatusCode(500, "Internal server error");
-            }
+                title = "Validation errors occurred",
+                status = StatusCodes.Status400BadRequest,
+                errors = ex.Errors
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting transaction");
+            return StatusCode(500, "Internal server error");
         }
     }
 }

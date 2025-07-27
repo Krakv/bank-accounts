@@ -1,7 +1,6 @@
-﻿namespace bank_accounts.Features
+﻿namespace bank_accounts.Features;
+
+public interface IEntity
 {
-    public interface IEntity
-    {
-        Guid Id { get; }
-    }
+    Guid Id { get; }
 }

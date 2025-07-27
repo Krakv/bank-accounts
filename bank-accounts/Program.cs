@@ -1,11 +1,10 @@
-using bank_accounts.Features.Accounts;
+using System.Reflection;
 using bank_accounts.Features.Transactions;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 

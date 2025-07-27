@@ -1,23 +1,20 @@
 ﻿using bank_accounts.Features.Accounts.Entities;
-using bank_accounts.Features.Transactions.Entities;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace bank_accounts.Infrastructure.Repository
+namespace bank_accounts.Infrastructure.Repository;
+
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public class AppDbContext : DbContext
+    public DbSet<Account> Accounts { get; set; }
+
+    [UsedImplicitly]
+    public async Task<IDbContextTransaction> BeginTransactionAsync()
+        => await Database.BeginTransactionAsync();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-        public DbSet<Account> Accounts { get; set; }
-        public DbSet<Transaction> Transactions { get; set; }
-
-        public async Task<IDbContextTransaction> BeginTransactionAsync()
-            => await Database.BeginTransactionAsync();
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseLazyLoadingProxies();
-        }
+        optionsBuilder.UseLazyLoadingProxies();
     }
 }

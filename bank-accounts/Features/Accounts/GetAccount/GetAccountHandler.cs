@@ -3,16 +3,16 @@ using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
-namespace bank_accounts.Features.Accounts.GetAccount
+namespace bank_accounts.Features.Accounts.GetAccount;
+
+public class GetAccountHandler(IRepository<Account> accountRepository) : IRequestHandler<GetAccountQuery, AccountDto?>
 {
-    public class GetAccountHandler(IRepository<Account> accountRepository) : IRequestHandler<GetAccountQuery, AccountDto?>
+    public async Task<AccountDto?> Handle(GetAccountQuery request, CancellationToken cancellationToken)
     {
-        public async Task<AccountDto?> Handle(GetAccountQuery request, CancellationToken cancellationToken)
-        {
-            var account = await accountRepository.GetByIdAsync(request.Id);
-            return account == null 
+        var account = await accountRepository.GetByIdAsync(request.Id);
+        return account == null 
             ? null 
-            : new AccountDto ()
+            : new AccountDto
             {
                 Id = account.Id,
                 OwnerId = account.OwnerId,
@@ -23,6 +23,5 @@ namespace bank_accounts.Features.Accounts.GetAccount
                 OpeningDate = account.OpeningDate,
                 ClosingDate = account.ClosingDate
             };
-        }
     }
 }

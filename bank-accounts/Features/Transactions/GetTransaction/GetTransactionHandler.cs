@@ -3,16 +3,16 @@ using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
-namespace bank_accounts.Features.Transactions.GetTransaction
+namespace bank_accounts.Features.Transactions.GetTransaction;
+
+public class GetTransactionHandler(IRepository<Transaction> transactionRepository) : IRequestHandler<GetTransactionQuery, TransactionDto?>
 {
-    public class GetTransactionHandler(IRepository<Transaction> transactionRepository) : IRequestHandler<GetTransactionQuery, TransactionDto?>
+    public async Task<TransactionDto?> Handle(GetTransactionQuery request, CancellationToken cancellationToken)
     {
-        public async Task<TransactionDto?> Handle(GetTransactionQuery request, CancellationToken cancellationToken)
-        {
-            var transaction = await transactionRepository.GetByIdAsync(request.Id);
-            return transaction == null 
-                ? null 
-                : new TransactionDto
+        var transaction = await transactionRepository.GetByIdAsync(request.Id);
+        return transaction == null 
+            ? null 
+            : new TransactionDto
             {
                 TransactionId = transaction.Id,
                 AccountId = transaction.AccountId,
@@ -23,6 +23,5 @@ namespace bank_accounts.Features.Transactions.GetTransaction
                 Description = transaction.Description,
                 Date = transaction.Date
             };
-        }
     }
 }

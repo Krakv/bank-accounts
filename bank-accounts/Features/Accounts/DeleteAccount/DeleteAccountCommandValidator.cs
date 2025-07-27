@@ -1,14 +1,15 @@
 ﻿using FluentValidation;
+using JetBrains.Annotations;
 
-namespace bank_accounts.Features.Accounts.DeleteAccount
+namespace bank_accounts.Features.Accounts.DeleteAccount;
+
+[UsedImplicitly]
+public class DeleteAccountCommandValidator : AbstractValidator<DeleteAccountCommand>
 {
-    public class DeleteAccountCommandValidator : AbstractValidator<DeleteAccountCommand>
+    public DeleteAccountCommandValidator()
     {
-        public DeleteAccountCommandValidator()
-        {
-            RuleFor(x => x.AccountId)
-                .NotEmpty()
-                .WithMessage("Account ID is required");
-        }
+        RuleFor(x => x.AccountId)
+            .NotEmpty()
+            .WithMessage("Account ID is required");
     }
 }

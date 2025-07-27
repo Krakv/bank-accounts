@@ -2,48 +2,39 @@
 using FluentValidation;
 using MediatR;
 
-namespace bank_accounts.PipelineBehaviors
+namespace bank_accounts.PipelineBehaviors;
+
+public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators) : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
 {
-    public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-        where TRequest : IRequest<TResponse>
+    public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next , CancellationToken cancellationToken)
     {
-        private readonly IEnumerable<IValidator<TRequest>> _validators;
-
-        public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+        if (!validators.Any())
         {
-            _validators = validators;
+            return await next(cancellationToken);
         }
 
+        var context = new ValidationContext<TRequest>(request);
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse>? next , CancellationToken cancellationToken)
+        var errorsDictionary = validators
+            .Select(x => x.Validate(context))
+            .SelectMany(x => x.Errors)
+            .Where(x => x != null)
+            .GroupBy(
+                x => x.PropertyName,
+                x => x.ErrorMessage,
+                (propertyName, errorMessages) => new
+                {
+                    Key = propertyName,
+                    Values = errorMessages.Distinct().ToArray()
+                })
+            .ToDictionary(x => x.Key, x => x.Values);
+
+        if (errorsDictionary.Any())
         {
-            if (!_validators.Any())
-            {
-                return await next();
-            }
-
-            var context = new ValidationContext<TRequest>(request);
-
-            var errorsDictionary = _validators
-                .Select(x => x.Validate(context))
-                .SelectMany(x => x.Errors)
-                .Where(x => x != null)
-                .GroupBy(
-                    x => x.PropertyName,
-                    x => x.ErrorMessage,
-                    (propertyName, errorMessages) => new
-                    {
-                        Key = propertyName,
-                        Values = errorMessages.Distinct().ToArray()
-                    })
-                .ToDictionary(x => x.Key, x => x.Values);
-
-            if (errorsDictionary.Any())
-            {
-                throw new ValidationAppException(errorsDictionary);
-            }
-
-            return await next();
+            throw new ValidationAppException(errorsDictionary);
         }
+
+        return await next(cancellationToken);
     }
 }

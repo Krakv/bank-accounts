@@ -8,7 +8,7 @@ namespace bank_accounts.Features.Transactions
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
-        private IDbContextTransaction _transaction;
+        private IDbContextTransaction _transaction = null!;
 
         public UnitOfWork(AppDbContext context)
         {

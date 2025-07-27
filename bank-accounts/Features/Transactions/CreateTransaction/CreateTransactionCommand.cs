@@ -1,5 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Dtos;
-using bank_accounts.Features.Transactions.Dtos;
+﻿using bank_accounts.Features.Accounts.Dto;
+using bank_accounts.Features.Transactions.Dto;
 using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction

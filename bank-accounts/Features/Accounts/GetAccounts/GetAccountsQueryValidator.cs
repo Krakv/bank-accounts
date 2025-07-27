@@ -63,17 +63,11 @@ namespace bank_accounts.Features.Accounts.GetAccounts
                 .WithMessage("Account IDs must contain valid GUID values");
         }
 
-        private bool BeValidAccountType(string type)
-        {
-            return type is "Deposit" or "Checking" or "Credit";
-        }
+        private bool BeValidAccountType(string? type) => type is "Deposit" or "Checking" or "Credit";
 
-        private bool BeValidCurrencyCode(string currency)
-        {
-            return currency is "RUB" or "EUR" or "USD";
-        }
+        private bool BeValidCurrencyCode(string? currency) => currency is "RUB" or "EUR" or "USD";
 
-        private bool BeValidInterestRate(string accountType, decimal? rate)
+        private bool BeValidInterestRate(string? accountType, decimal? rate)
         {
             if (accountType is "Deposit" or "Credit")
             {

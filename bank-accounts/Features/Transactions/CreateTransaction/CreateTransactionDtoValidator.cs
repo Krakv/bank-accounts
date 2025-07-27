@@ -1,4 +1,4 @@
-﻿using bank_accounts.Features.Transactions.Dtos;
+﻿using bank_accounts.Features.Transactions.Dto;
 using FluentValidation;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction

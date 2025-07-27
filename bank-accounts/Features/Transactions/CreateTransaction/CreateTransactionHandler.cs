@@ -1,6 +1,6 @@
-﻿using bank_accounts.Features.Accounts.Dtos;
+﻿using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.Entities;
-using bank_accounts.Features.Transactions.Dtos;
+using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;

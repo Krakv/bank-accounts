@@ -1,7 +1,7 @@
 ﻿using bank_accounts.Exceptions;
 using bank_accounts.Features.Accounts.CreateAccount;
 using bank_accounts.Features.Accounts.DeleteAccount;
-using bank_accounts.Features.Accounts.Dtos;
+using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Accounts.GetAccounts;
 using bank_accounts.Features.Accounts.GetAccountStatement;
@@ -18,7 +18,23 @@ namespace bank_accounts.Features.Accounts
         private readonly ILogger<AccountsController> _logger = logger;
         private readonly IMediator _mediator = mediator;
 
+        /// <summary>
+        /// Создает новый банковский счет
+        /// </summary>
+        /// <remarks>
+        /// ### Параметры:
+        /// 
+        /// - **ownerId** - GUID владельца счета (обязательный)
+        /// - **type** - Тип счета: Deposit, Checking или Credit (обязательный)
+        /// - **currency** - Валюта в формате ISO 4217 (USD, EUR, RUB) (обязательный)
+        /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal >= 0, 100 >= decimal)
+        /// </remarks>
+        /// <param name="createAccountDto">Данные для создания счета</param>
+        /// <response code="201">Возвращает ID созданного счета</response>
+        /// <response code="400">Ошибки валидации</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpPost]
+        [ProducesResponseType(201)]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto createAccountDto)
         {
             try
@@ -47,13 +63,34 @@ namespace bank_accounts.Features.Accounts
             }
         }
 
+        /// <summary>
+        /// Получает информацию о банковском счете по его идентификатору
+        /// </summary>
+        /// <remarks>
+        /// ### Формат ответа:
+        /// 
+        /// - **id** - Уникальный идентификатор счёта (GUID)
+        /// - **ownerId** - ID владельца счёта (GUID)
+        /// - **type** - Тип счета: Deposit, Checking или Credit
+        /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217)
+        /// - **balance** - Текущий баланс (decimal)
+        /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal)
+        /// - **openingDate** - Дата открытия (формат YYYY-MM-DD)
+        /// - **closingDate** - Дата закрытия (null для активных счетов)
+        /// </remarks>
+        /// <param name="id">GUID счёта</param>
+        /// <response code="200">Возвращает данные счёта в указанном формате</response>
+        /// <response code="400">Невалидный ID счёта</response>
+        /// <response code="404">Счёт не найден</response>
+        /// <response code="500">Ошибка сервера</response>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(AccountDto), 200)]
         public async Task<IActionResult> GetAccount(Guid id)
         {
             try
             {
                 var accountDto = await _mediator.Send(new GetAccountQuery(id), CancellationToken.None);
-                return accountDto == null ? NotFound() : Ok(accountDto);
+                return accountDto == null ? NotFound("Account was not found") : Ok(accountDto);
             }
             catch (ValidationAppException ex)
             {
@@ -71,7 +108,37 @@ namespace bank_accounts.Features.Accounts
             }
         }
 
+
+        /// <summary>
+        /// Получить список счетов с фильтрацией
+        /// </summary>
+        /// <remarks>
+        /// ### Параметры запроса:
+        /// 
+        /// - **ownerId** - Фильтр по ID владельца (GUID, опционально)
+        /// - **accountIds** - Список ID счетов через запятую (GUID, опционально)
+        /// - **type** - Тип счета: Deposit, Checking или Credit (опционально)
+        /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217, опционально)
+        /// - **page** - Номер страницы (по умолчанию 1)
+        /// - **pageSize** - Размер страницы (по умолчанию 20)
+        /// 
+        /// ### Формат ответа для счета:
+        /// 
+        /// - **id** - Уникальный идентификатор счёта (GUID)
+        /// - **ownerId** - ID владельца счёта (GUID)
+        /// - **type** - Тип счета: Deposit, Checking или Credit
+        /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217)
+        /// - **balance** - Текущий баланс (decimal)
+        /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal)
+        /// - **openingDate** - Дата открытия (формат YYYY-MM-DD)
+        /// - **closingDate** - Дата закрытия (null для активных счетов)
+        /// </remarks>
+        /// <param name="filter">Параметры фильтрации</param>
+        /// <response code="200">Успешный запрос, возвращает список счетов</response>
+        /// <response code="400">Ошибки валидации</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpGet]
+        [ProducesResponseType(typeof(AccountsDto), 200)]
         public async Task<IActionResult> GetAccounts([FromQuery] AccountFilterDto filter)
         {
             try
@@ -82,6 +149,11 @@ namespace bank_accounts.Features.Accounts
                 }
 
                 var result = await _mediator.Send(new GetAccountsQuery(filter), CancellationToken.None);
+
+                if (result.Accounts != null && !result.Accounts.Any())
+                {
+                    return NotFound("Accounts were not found");
+                }
 
                 return Ok(result);
             }
@@ -101,7 +173,16 @@ namespace bank_accounts.Features.Accounts
             }
         }
 
+        /// <summary>
+        /// Обновить данные счета
+        /// </summary>
+        /// <param name="updateDto">Поля для обновления</param>
+        /// <response code="200">Успешный запрос, обновляет счет</response>
+        /// <response code="400">Ошибки валидации</response>
+        /// <response code="404">Счет не найден</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpPatch("{id}")]
+        [ProducesResponseType(200)]
         public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateAccountDto updateDto)
         {
             try
@@ -138,11 +219,27 @@ namespace bank_accounts.Features.Accounts
             }
         }
 
+        /// <summary>
+        /// Закрыть счет
+        /// </summary>
+        /// <remarks>Запись о счете не удаляется, обновляется поле closingDate</remarks>
+        /// <param name="id">GUID счёта</param>
+        /// <response code="200">Успешный запрос, закрывает счет</response>
+        /// <response code="400">Ошибки валидации</response>
+        /// <response code="404">Счет не найден</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> CloseAccount(Guid id)
         {
             try
             {
+                var account = await _mediator.Send(new GetAccountQuery(id), CancellationToken.None);
+
+                if (account == null)
+                {
+                    return NotFound("Account was not found");
+                }
+
                 await _mediator.Send(new DeleteAccountCommand(id), CancellationToken.None);
                 return Ok();
             }
@@ -162,7 +259,18 @@ namespace bank_accounts.Features.Accounts
             }
         }
 
+
+        /// <summary>
+        /// Получить выписку по счету за указанный период
+        /// </summary>
+        /// <param name="accountId">Идентификатор счета (GUID)</param>
+        /// <param name="request">Параметры запроса выписки</param>
+        /// <response code="200">Возвращает выписку по счету</response>
+        /// <response code="400">Невалидные параметры запроса</response>
+        /// <response code="404">Счет не найден</response>
+        /// <response code="500">Внутренняя ошибка сервера</response>
         [HttpGet("{accountId}/statement")]
+        [ProducesResponseType(typeof(AccountStatementResponseDto), 200)]
         public async Task<IActionResult> GetAccountStatement(Guid accountId, [FromQuery] AccountStatementRequestDto request)
         {
             try
@@ -170,6 +278,13 @@ namespace bank_accounts.Features.Accounts
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
+                }
+
+                var account = await _mediator.Send(new GetAccountQuery(accountId), CancellationToken.None);
+
+                if (account == null)
+                {
+                    return NotFound("Account was not found");
                 }
 
                 var statement = await _mediator.Send(new GetAccountStatementQuery(accountId, request),

@@ -1,4 +1,4 @@
-﻿using bank_accounts.Features.Accounts.Dtos;
+﻿using bank_accounts.Features.Accounts.Dto;
 using MediatR;
 
 namespace bank_accounts.Features.Accounts.UpdateAccount

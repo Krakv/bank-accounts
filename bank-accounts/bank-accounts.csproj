@@ -7,6 +7,8 @@
     <RootNamespace>bank_accounts</RootNamespace>
     <UserSecretsId>3b38b8eb-9e39-400c-a490-11f363458fb8</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+	  <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

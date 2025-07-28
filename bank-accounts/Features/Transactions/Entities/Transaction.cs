@@ -4,7 +4,7 @@ namespace bank_accounts.Features.Transactions.Entities;
 
 public class Transaction : IEntity
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; init; }
     public Guid AccountId { get; set; }
     public Guid? CounterpartyAccountId { get; set; }
     public decimal Value { get; set; }

@@ -49,4 +49,10 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
     {
         await context.SaveChangesAsync();
     }
+
+    public async Task DeleteAsync(TEntity entity)
+    {
+        _dbSet.Remove(entity);
+        await context.SaveChangesAsync();
+    }
 }

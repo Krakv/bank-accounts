@@ -66,8 +66,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 
             if (transactionIds != null)
                 return CreatedAtAction(nameof(GetTransaction), new { id = transactionIds[0] }, transactionIds);
-            else
-                return NotFound("Account was not found");
+            return NotFound("Account was not found");
         }
         catch (ValidationAppException ex)
         {

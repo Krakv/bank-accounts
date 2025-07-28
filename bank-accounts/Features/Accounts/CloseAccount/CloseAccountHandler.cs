@@ -2,15 +2,16 @@
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
-namespace bank_accounts.Features.Accounts.DeleteAccount;
+namespace bank_accounts.Features.Accounts.CloseAccount;
 
 public class DeleteAccountHandler(IRepository<Account> accountRepository) : IRequestHandler<DeleteAccountCommand>
 {
     public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
-        var account = await accountRepository.GetByIdAsync(request.AccountId);
-
-        if (account != null) await accountRepository.DeleteAsync(account);
+        await accountRepository.UpdatePartialAsync(
+            new Account { Id = request.AccountId, ClosingDate = DateTime.UtcNow },
+            x => x.ClosingDate
+        );
 
         await accountRepository.SaveChangesAsync();
     }

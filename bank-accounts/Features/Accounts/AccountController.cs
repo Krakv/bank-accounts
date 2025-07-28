@@ -1,6 +1,6 @@
 ﻿using bank_accounts.Exceptions;
 using bank_accounts.Features.Accounts.CreateAccount;
-using bank_accounts.Features.Accounts.DeleteAccount;
+using bank_accounts.Features.Accounts.CloseAccount;
 using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Accounts.GetAccounts;
@@ -227,7 +227,8 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="400">Ошибки валидации</response>
     /// <response code="404">Счет не найден</response>
     /// <response code="500">Внутренняя ошибка сервера</response>
-    [HttpDelete("{id:guid}")]
+    [HttpPatch("{id:guid}/close")]
+    [ProducesResponseType(200)]
     public async Task<IActionResult> CloseAccount(Guid id)
     {
         try
@@ -258,6 +259,46 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
     }
 
+    /// <summary>
+    /// Удалить счет
+    /// </summary>
+    /// <remarks>Полностью удаляет счет из системы</remarks>
+    /// <param name="id">Идентификатор счета (GUID)</param>
+    /// <response code="200">Счет успешно удален</response>
+    /// <response code="400">Ошибка валидации идентификатора счета</response>
+    /// <response code="404">Счет с указанным ID не найден</response>
+    /// <response code="500">Внутренняя ошибка сервера</response>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> DeleteAccount(Guid id)
+    {
+        try
+        {
+            var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
+
+            if (account == null)
+            {
+                return NotFound("Account was not found");
+            }
+
+            await mediator.Send(new DeleteAccountCommand(id), CancellationToken.None);
+            return Ok();
+        }
+        catch (ValidationAppException ex)
+        {
+            return BadRequest(new
+            {
+                title = "Validation errors occurred",
+                status = StatusCodes.Status400BadRequest,
+                errors = ex.Errors
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error closing account {Id}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
 
     /// <summary>
     /// Получить выписку по счету за указанный период

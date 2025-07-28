@@ -11,4 +11,5 @@ public interface IRepository<TEntity> where TEntity : class, IEntity
     Task<(IEnumerable<TEntity> data, int totalCount)> GetFilteredAsync<TFilter>(TFilter filter) where TFilter : Filter<TEntity>;
     Task UpdatePartialAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty>> propertyExpression);
     Task SaveChangesAsync();
+    Task DeleteAsync(TEntity entity);
 }

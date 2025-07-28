@@ -4,7 +4,7 @@ namespace bank_accounts.Features.Accounts.Entities;
 
 public class Account : IEntity
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; init; } = Guid.NewGuid();
     public Guid OwnerId { get; set; }
 
     [MinLength(6)]

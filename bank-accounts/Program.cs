@@ -2,6 +2,8 @@ using System.Reflection;
 using bank_accounts.Features.Transactions;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
+using bank_accounts.Services.CurrencyService;
+using bank_accounts.Services.VerificationService;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,9 +29,10 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddMediatR(cf => cf.RegisterServicesFromAssembly(typeof(Program).Assembly));
-
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
+builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>

@@ -12,7 +12,7 @@ public record CreateAccountDto
     public Guid OwnerId { get; init; }
 
     /// <summary>
-    /// Тип счета: Deposit, Current или Credit (обязательно)
+    /// Тип счета: Deposit, Checking или Credit (обязательно)
     /// </summary>
     /// <example>Deposit</example>
     public string Type { get; init; } = string.Empty;

@@ -6,9 +6,9 @@ using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
-public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateTransactionCommand, Guid?>
+public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateTransactionCommand, Guid[]?>
 {
-    public async Task<Guid?> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<Guid[]?> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var dto = request.CreateTransactionDto;
         var account = request.Account;
@@ -21,7 +21,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
 
         try
         {
-            Guid? result;
+            Guid[]? result;
             if (dto.CounterpartyAccountId.HasValue)
             {
                 if (counterpartyAccount != null)
@@ -42,7 +42,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         }
     }
 
-    private async Task<Guid> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
+    private async Task<Guid[]> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
     {
         Account account = new() { Id = accountDto.Id, Balance = accountDto.Balance };
         Account counterparty = new() { Id = counterpartyDto.Id, Balance = counterpartyDto.Balance };
@@ -117,12 +117,10 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
         await unitOfWork.Accounts.UpdatePartialAsync(counterparty, x => x.Balance);
 
-        return receiverTransaction.AccountId == account.Id
-            ? receiverTransaction.Id
-            : senderTransaction.Id;
+        return [receiverTransaction.Id, senderTransaction.Id];
     }
 
-    private async Task<Guid> ProcessSingleTransactionAsync(CreateTransactionDto dto, AccountDto accountDto)
+    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, AccountDto accountDto)
     {
         var transaction = new Transaction
         {
@@ -144,6 +142,6 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         await unitOfWork.Transactions.CreateAsync(transaction);
         await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
 
-        return transaction.Id;
+        return [transaction.Id];
     }
 }

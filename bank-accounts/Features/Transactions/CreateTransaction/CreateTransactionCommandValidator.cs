@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using bank_accounts.Services.CurrencyService;
+using FluentValidation;
 using JetBrains.Annotations;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
@@ -6,11 +7,11 @@ namespace bank_accounts.Features.Transactions.CreateTransaction;
 [UsedImplicitly]
 public class CreateTransactionCommandValidator : AbstractValidator<CreateTransactionCommand>
 {
-    public CreateTransactionCommandValidator()
+    public CreateTransactionCommandValidator(ICurrencyService currencyService)
     {
         RuleFor(x => x.CreateTransactionDto)
             .NotNull()
-            .SetValidator(new CreateTransactionDtoValidator());
+            .SetValidator(new CreateTransactionDtoValidator(currencyService));
 
         RuleFor(x => x.Account)
             .NotNull()

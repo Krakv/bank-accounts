@@ -1,17 +1,28 @@
 ﻿using FluentValidation;
 using JetBrains.Annotations;
+using bank_accounts.Services.VerificationService;
+using bank_accounts.Services.CurrencyService;
 
 namespace bank_accounts.Features.Accounts.GetAccounts;
 
 [UsedImplicitly]
 public class GetAccountsQueryValidator : AbstractValidator<GetAccountsQuery>
 {
-    public GetAccountsQueryValidator()
+    private readonly ICurrencyService _currencyService;
+    private readonly IVerificationService _verificationService;
+
+    public GetAccountsQueryValidator(ICurrencyService currencyService, IVerificationService verificationService)
     {
+        _currencyService = currencyService;
+        _verificationService = verificationService;
+
         RuleFor(x => x.AccountFilterDto.OwnerId)
             .NotEmpty()
             .When(x => x.AccountFilterDto.OwnerId.HasValue)
-            .WithMessage("Owner ID must be a valid GUID");
+            .WithMessage("Owner ID must be a valid GUID")
+            .MustAsync(BeVerifiedClient)
+            .When(x => x.AccountFilterDto.OwnerId.HasValue)
+            .WithMessage("Client is not verified");
 
         RuleFor(x => x.AccountFilterDto.Type)
             .Must(BeValidAccountType)
@@ -19,9 +30,9 @@ public class GetAccountsQueryValidator : AbstractValidator<GetAccountsQuery>
             .WithMessage("Account type must be Deposit, Checking or Credit");
 
         RuleFor(x => x.AccountFilterDto.Currency)
-            .Must(BeValidCurrencyCode)
+            .MustAsync(BeSupportedCurrency)
             .When(x => !string.IsNullOrEmpty(x.AccountFilterDto.Currency))
-            .WithMessage("Invalid currency code (ISO 4217)");
+            .WithMessage("Unsupported currency code");
 
         RuleFor(x => x.AccountFilterDto.MinBalance)
             .GreaterThanOrEqualTo(0)
@@ -65,9 +76,19 @@ public class GetAccountsQueryValidator : AbstractValidator<GetAccountsQuery>
             .WithMessage("Account IDs must contain valid GUID values");
     }
 
-    private static bool BeValidAccountType(string? type) => type is "Deposit" or "Checking" or "Credit";
+    private async Task<bool> BeVerifiedClient(Guid? ownerId, CancellationToken ct)
+    {
+        return ownerId.HasValue && await _verificationService.VerifyClientAsync(ownerId.Value);
+    }
 
-    private static bool BeValidCurrencyCode(string? currency) => currency is "RUB" or "EUR" or "USD";
+    private async Task<bool> BeSupportedCurrency(string? currencyCode, CancellationToken ct)
+    {
+        return !string.IsNullOrEmpty(currencyCode) &&
+               await _currencyService.IsCurrencySupportedAsync(currencyCode);
+    }
+
+    private static bool BeValidAccountType(string? type) =>
+        type is "Deposit" or "Checking" or "Credit";
 
     private static bool BeValidInterestRate(string? accountType, decimal? rate)
     {

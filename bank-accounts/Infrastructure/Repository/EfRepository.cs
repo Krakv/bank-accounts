@@ -37,7 +37,7 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
 
     public async Task UpdatePartialAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty>> propertyExpression)
     {
-        var existingEntity = context.Find<TEntity>(entity.Id);
+        var existingEntity = await context.FindAsync<TEntity>(entity.Id);
         if (existingEntity != null) context.Entry(existingEntity).State = EntityState.Detached;
 
         _dbSet.Attach(entity);

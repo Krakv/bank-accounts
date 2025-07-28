@@ -16,8 +16,10 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
 
         var context = new ValidationContext<TRequest>(request);
 
-        var errorsDictionary = validators
-            .Select(x => x.Validate(context))
+        var validationFailures = await Task.WhenAll(
+            validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
+
+        var errorsDictionary = validationFailures
             .SelectMany(x => x.Errors)
             .Where(x => x != null)
             .GroupBy(

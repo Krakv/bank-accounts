@@ -20,12 +20,12 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// Создает новый банковский счет
     /// </summary>
     /// <remarks>
-    /// ### Параметры:
-    /// 
-    /// - **ownerId** - GUID владельца счета (обязательный)
-    /// - **type** - Тип счета: Deposit, Checking или Credit (обязательный)
-    /// - **currency** - Валюта в формате ISO 4217 (USD, EUR, RUB) (обязательный)
-    /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal >= 0, 100 >= decimal)
+    /// <para>Параметры:</para>
+    ///
+    /// <para>- ownerId - GUID владельца счета (обязательный)</para>
+    /// <para>- type - Тип счета: Deposit, Checking или Credit (обязательный)</para>
+    /// <para>- currency - Валюта в формате ISO 4217 (USD, EUR, RUB) (обязательный)</para>
+    /// <para>- interestRate - Процентная ставка (только для Deposit/Credit, decimal >= 0, 100 >= decimal)</para>
     /// </remarks>
     /// <param name="createAccountDto">Данные для создания счета</param>
     /// <response code="201">Возвращает ID созданного счета</response>
@@ -65,16 +65,16 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// Получает информацию о банковском счете по его идентификатору
     /// </summary>
     /// <remarks>
-    /// ### Формат ответа:
+    /// <para>Формат ответа:</para>
     /// 
-    /// - **id** - Уникальный идентификатор счёта (GUID)
-    /// - **ownerId** - ID владельца счёта (GUID)
-    /// - **type** - Тип счета: Deposit, Checking или Credit
-    /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217)
-    /// - **balance** - Текущий баланс (decimal)
-    /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal)
-    /// - **openingDate** - Дата открытия (формат YYYY-MM-DD)
-    /// - **closingDate** - Дата закрытия (null для активных счетов)
+    /// <para>- id - Уникальный идентификатор счёта (GUID)</para>
+    /// <para>- ownerId - ID владельца счёта (GUID)</para>
+    /// <para>- type - Тип счета: Deposit, Checking или Credit</para>
+    /// <para>- currency - Валюта: RUB, USD, EUR (ISO 4217)</para>
+    /// <para>- balance - Текущий баланс (decimal)</para>
+    /// <para>- interestRate - Процентная ставка (только для Deposit/Credit, decimal)</para>
+    /// <para>- openingDate - Дата открытия (формат YYYY-MM-DD)</para>
+    /// <para>- closingDate - Дата закрытия (null для активных счетов)</para>
     /// </remarks>
     /// <param name="id">GUID счёта</param>
     /// <response code="200">Возвращает данные счёта в указанном формате</response>
@@ -111,25 +111,25 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// Получить список счетов с фильтрацией
     /// </summary>
     /// <remarks>
-    /// ### Параметры запроса:
-    /// 
-    /// - **ownerId** - Фильтр по ID владельца (GUID, опционально)
-    /// - **accountIds** - Список ID счетов через запятую (GUID, опционально)
-    /// - **type** - Тип счета: Deposit, Checking или Credit (опционально)
-    /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217, опционально)
-    /// - **page** - Номер страницы (по умолчанию 1)
-    /// - **pageSize** - Размер страницы (по умолчанию 20)
-    /// 
-    /// ### Формат ответа для счета:
-    /// 
-    /// - **id** - Уникальный идентификатор счёта (GUID)
-    /// - **ownerId** - ID владельца счёта (GUID)
-    /// - **type** - Тип счета: Deposit, Checking или Credit
-    /// - **currency** - Валюта: RUB, USD, EUR (ISO 4217)
-    /// - **balance** - Текущий баланс (decimal)
-    /// - **interestRate** - Процентная ставка (только для Deposit/Credit, decimal)
-    /// - **openingDate** - Дата открытия (формат YYYY-MM-DD)
-    /// - **closingDate** - Дата закрытия (null для активных счетов)
+    /// <para>Параметры запроса:</para>
+    ///
+    /// <para>- ownerId - Фильтр по ID владельца (GUID, опционально)</para>
+    /// <para>- accountIds - Список ID счетов через запятую (GUID, опционально)</para>
+    /// <para>- type - Тип счета: Deposit, Checking или Credit (опционально)</para>
+    /// <para>- currency - Валюта: RUB, USD, EUR (ISO 4217, опционально)</para>
+    /// <para>- page - Номер страницы (по умолчанию 1)</para>
+    /// <para>- pageSize - Размер страницы (по умолчанию 20)</para>
+    ///
+    /// <para>Формат ответа для счета:</para>
+    ///
+    /// <para>- id - Уникальный идентификатор счёта (GUID)</para>
+    /// <para>- ownerId - ID владельца счёта (GUID)</para>
+    /// <para>- type - Тип счета: Deposit, Checking или Credit</para>
+    /// <para>- currency - Валюта: RUB, USD, EUR (ISO 4217)</para>
+    /// <para>- balance - Текущий баланс (decimal)</para>
+    /// <para>- interestRate - Процентная ставка (только для Deposit/Credit, decimal)</para>
+    /// <para>- openingDate - Дата открытия (формат YYYY-MM-DD)</para>
+    /// <para>- closingDate - Дата закрытия (null для активных счетов)</para>
     /// </remarks>
     /// <param name="filter">Параметры фильтрации</param>
     /// <response code="200">Успешный запрос, возвращает список счетов</response>

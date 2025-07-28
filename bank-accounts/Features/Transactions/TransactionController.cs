@@ -12,11 +12,11 @@ namespace bank_accounts.Features.Transactions;
 /// Контроллер для работы с банковскими транзакциями
 /// </summary>
 /// <remarks>
-/// ### Обрабатываемые операции:
+/// <para>Обрабатываемые операции:</para> 
 /// 
-/// - Создание транзакций (пополнения/списания)
-/// - Переводы между счетами 
-/// - Получение информации о транзакциях
+/// <para>Создание транзакций (пополнения/списания) </para>
+/// <para>Переводы между счетами </para>
+/// <para>Получение информации о транзакциях </para>
 /// </remarks>
 [ApiController]
 [Route("transactions")]
@@ -26,16 +26,16 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
     /// Создать новую транзакцию
     /// </summary>
     /// <remarks>
-    /// ### Поддерживаемые операции:
+    /// <para>Поддерживаемые операции:</para>
     /// 
-    /// 1. **Внутренние операции**  
-    ///    - Пополнения/списания средств  
-    ///    - Параметр: counterpartyAccountId = null
+    /// <para>1. Внутренние операции</para>
+    /// <para>   Пополнения/списания средств</para>
+    /// <para>   Параметр: counterpartyAccountId = null</para>
     /// 
-    /// 2. **Межсчетные переводы**  
-    ///    - Переводы между счетами  
-    ///    - Параметр: counterpartyAccountId (указание счета-получателя)  
-    ///    - Результат: создает парные транзакции (списание + зачисление)
+    /// <para>2. Межсчетные переводы</para>
+    /// <para>   Переводы между счетами</para>
+    /// <para>   Параметр: counterpartyAccountId (указание счета-получателя)</para>
+    /// <para>   Результат: создает парные транзакции (списание + зачисление)</para>
     /// </remarks>
     /// <response code="201">Транзакция успешно создана</response>
     /// <response code="400">Невалидные данные запроса</response>
@@ -61,10 +61,13 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
                 ? null 
                 : await mediator.Send(new GetAccountQuery(dto.CounterpartyAccountId.Value), CancellationToken.None);
 
-            var transactionId =
+            var transactionIds =
                 await mediator.Send(new CreateTransactionCommand(dto, accountDto, counterpartyDto));
 
-            return CreatedAtAction(nameof(GetTransaction), new { id = transactionId }, null);
+            if (transactionIds != null)
+                return CreatedAtAction(nameof(GetTransaction), new { id = transactionIds[0] }, transactionIds);
+            else
+                return NotFound("Account was not found");
         }
         catch (ValidationAppException ex)
         {

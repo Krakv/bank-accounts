@@ -25,14 +25,6 @@ public class AccountStatementResponseDto
     /// <example>2025-03-31</example>
     public DateTime EndDate { get; set; }
 
-    /// <summary>Баланс на начало периода</summary>
-    /// <example>100.00</example>
-    public decimal OpeningBalance { get; set; }
-
-    /// <summary>Баланс на конец периода</summary>
-    /// <example>350.00</example>
-    public decimal ClosingBalance { get; set; }
-
     /// <summary>Список транзакций за период</summary>
     public List<TransactionStatementDto>? Transactions { get; set; }
 

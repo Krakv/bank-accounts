@@ -1,4 +1,23 @@
 # Сервис банковские счета
+
+## Архитектура проекта
+
+- **Features** — бизнес-логика:
+  - `Accounts`, `Transactions` — сущности с их командами и запросами;
+- **Infrastructure** — EF Core, репозитории;
+- **Services** — вспомогательные сервисы, валидации;
+
+Используются:
+- `MediatR` для CQRS
+- `FluentValidation`
+- `EF Core` + `SQLite`
+
+## REST API
+
+Полное описание доступно в Swagger:
+
+## Функции
+
 ### 1. Создать счет
 `POST /accounts`
 

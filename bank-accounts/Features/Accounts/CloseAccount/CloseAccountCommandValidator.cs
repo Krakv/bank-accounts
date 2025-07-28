@@ -4,9 +4,9 @@ using JetBrains.Annotations;
 namespace bank_accounts.Features.Accounts.CloseAccount;
 
 [UsedImplicitly]
-public class DeleteAccountCommandValidator : AbstractValidator<DeleteAccountCommand>
+public class CloseAccountCommandValidator : AbstractValidator<CloseAccountCommand>
 {
-    public DeleteAccountCommandValidator()
+    public CloseAccountCommandValidator()
     {
         RuleFor(x => x.AccountId)
             .NotEmpty()

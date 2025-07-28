@@ -29,8 +29,6 @@ public class GetAccountStatementHandler(IRepository<Account> accountRepository, 
         var transactions= (await transactionRepository
             .GetFilteredAsync(filter)).data;
 
-        var closingBalance = account.Balance;
-
         var enumerable = transactions.ToList();
 
         var totalCredits = enumerable
@@ -41,8 +39,6 @@ public class GetAccountStatementHandler(IRepository<Account> accountRepository, 
             .Where(t => t.Type == "Debit")
             .Sum(t => t.Value);
 
-        var openingBalance = closingBalance - totalCredits + totalDebits;
-
 
         return new AccountStatementResponseDto
         {
@@ -51,8 +47,6 @@ public class GetAccountStatementHandler(IRepository<Account> accountRepository, 
             Currency = account.Currency,
             StartDate = filter.StartDate,
             EndDate = filter.EndDate,
-            OpeningBalance = openingBalance,
-            ClosingBalance = closingBalance,
             Transactions = enumerable.Select(t => new TransactionStatementDto
             {
                 Id = t.Id,

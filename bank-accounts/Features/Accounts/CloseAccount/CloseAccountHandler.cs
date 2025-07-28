@@ -4,9 +4,9 @@ using MediatR;
 
 namespace bank_accounts.Features.Accounts.CloseAccount;
 
-public class DeleteAccountHandler(IRepository<Account> accountRepository) : IRequestHandler<DeleteAccountCommand>
+public class CloseAccountHandler(IRepository<Account> accountRepository) : IRequestHandler<CloseAccountCommand>
 {
-    public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
+    public async Task Handle(CloseAccountCommand request, CancellationToken cancellationToken)
     {
         await accountRepository.UpdatePartialAsync(
             new Account { Id = request.AccountId, ClosingDate = DateTime.UtcNow },

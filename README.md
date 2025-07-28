@@ -11,20 +11,8 @@
   "interestRate": 3.0,   // Опционально, decimal > 0; для Deposit/Credit
 }
 ```
-Ответ (201 Created):
-```json
-{
-  "id": "GUID",
-  "ownerId": "GUID",
-  "type": "Deposit",      
-  "currency": "EUR",
-  "balance": 0.00,
-  "interestRate": 3.0,
-  "openingDate": "2025-03-12",
-  "closingDate": null
-}
-```
-Ответ (400 Bad Request): невалидные данные.
+Ответ (201 Created) - возвращает accountId
+Ответ (400 Bad Request) - ошибки валидации.
 ### 2. Изменить счет
 `PATCH /accounts/{id}`
 
@@ -34,37 +22,29 @@
  "interestRate": null // Опционально, decimal > 0; для Deposit/Credit
 }
 ```
-Ответ (200 Ok):
-```json
-{
-  "id": "GUID",
-  "ownerId": "GUID",
-  "type": "Deposit",
-  "currency": "EUR",
-  "balance": 0.00,
-  "interestRate": 3.0,
-  "openingDate": "2025-03-12",
-  "closingDate": null
-}
-```
-### 3. Удалить счет (Закрыть счет)
-*Информация о счете не удаляется, добавляется значение для поля closingDate, и счет считается закрытым.*
+Ответ (200 Ok)
+### 3. Удалить счет (и закрыть счет)
+*Полное удаление счёта из системы.*
 
 `DELETE /accounts/{id}`  
 
-Ответ (200 Ok):
-```json
-{
-  "id": "GUID",
-  "ownerId": "GUID",
-  "type": "Deposit",
-  "currency": "EUR",
-  "balance": 123.00,
-  "interestRate": 3.0,
-  "openingDate": "2025-03-12",
-  "closingDate": "2026-03-12"
-}
-```
+Ответ (200 Ok) - счет удален.
+
+Ответ (400 BadRequest) - ошибки валидации.
+
+Ответ (404 NotFound) - счёт не найден.
+
+**Если требуется закрыть счет:**
+
+*Информация о счете не удаляется, добавляется значение для поля closingDate, и счет считается закрытым.*
+
+`PATCH /accounts/{id}/close`
+
+Ответ (200 Ok) - счет закрыт.
+
+Ответ (400 BadRequest) - ошибки валидации.
+
+Ответ (404 NotFound) - счёт не найден.
 ### 4. Получить список счетов
 
 *По умолчанию возвращаются все счета, отсортированные по дате, требуется использовать фильтрацию*
@@ -111,9 +91,9 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
   }
 }
 ```
-Ответ (400 Bad Request): невалидные данные.
+Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found): счёт не найден.
+Ответ (404 Not Found) - счёт не найден.
 ### 5. Зарегистрировать транзакцию по счету
 `POST /transactions`
 
@@ -129,24 +109,11 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 	"date": "2025-03-12T11:30:19"
 }
 ```
-Ответ (201 Created):
-```json
-{
-	"transactionId": "GUID",
-	"accountId": "GUID",
-	"counterpartyAccountId": null,
-	"currency": "EUR",
-	"value": 100,
-	"type": "Credit", // "Deposit" | "Credit"
-	"description": "",
-	"date": "2025-03-12T11:30:19"
-}
-```
-Ответ (400 Bad Request): невалидные данные.
+Ответ (201 Created)  - возвращает массив с transactionId
 
-Ответ (404 Not Found): транзакция не найдена.
+Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (422 Unprocessable Entity): недостаточно средств.
+Ответ (404 Not Found) - транзакция не найдена.
 ### 6.  Выполнить перевод между счётами
 `POST /transactions`
 
@@ -162,24 +129,11 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 	"date": "2025-03-12T11:30:19"
 }
 ```
-Ответ (201 Created):
-```json
-{
-	"transactionId": "GUID",
-	"accountId": "GUID",
-	"counterpartyAccountId": "GUID",
-	"currency": "EUR",
-	"value": 100,
-	"type": "Credit",
-	"description": "",
-	"date": "2025-03-12T11:30:19"
-}
-```
-Ответ (400 Bad Request): невалидные данные.
+Ответ (201 Created)  - возвращает массив с двумя transactionId
 
-Ответ (404 Not Found): транзакция не найдена.
+Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (422 Unprocessable Entity): недостаточно средств.
+Ответ (404 Not Found) - транзакция не найдена.
 ### 7. Получить выписку
 `GET /accounts/{accountId}/statement?start=2025-03-01&end=2025-03-31`
 
@@ -215,11 +169,9 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
   "totalDebits": 50.00
 }
 ```
-Ответ (400 Bad Request): невалидные параметры запроса, не указаны обязательные параметры start или end.
+Ответ (400 Bad Request) - ошибки валидации.
 
 Ответ (404 Not Found): счет не найден.
-
-Ответ (422 Unprocessable Entity): дата начала периода позже даты окончания.
 ### 8. Проверка счетов у клиента
 `GET /accounts?ownerId=123`
 
@@ -250,6 +202,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
   ]
 }
 ```
-Ответ (400 Bad Request): невалидные данные.
+Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found): счёт не найден.
+Ответ (404 Not Found) - счёт не найден.

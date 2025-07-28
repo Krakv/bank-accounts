@@ -42,7 +42,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
             return CreatedAtAction(
                 nameof(GetAccount),
                 new { id },
-                null
+                id
             );
         }
         catch (ValidationAppException ex)

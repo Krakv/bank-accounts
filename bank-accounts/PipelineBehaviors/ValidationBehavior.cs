@@ -28,11 +28,11 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
                 (propertyName, errorMessages) => new
                 {
                     Key = propertyName,
-                    Values = errorMessages.Distinct().ToArray()
+                    Values = errorMessages.Distinct().First()
                 })
             .ToDictionary(x => x.Key, x => x.Values);
 
-        if (errorsDictionary.Any())
+        if (errorsDictionary != null && errorsDictionary.Any())
         {
             throw new ValidationAppException(errorsDictionary);
         }

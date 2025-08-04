@@ -10,11 +10,13 @@ using bank_accounts.Features.Accounts.GetAccountStatement;
 using bank_accounts.Features.Accounts.UpdateAccount;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace bank_accounts.Features.Accounts;
 
 [Route("[controller]")]
 [ApiController]
+[Authorize]
 public class AccountsController(ILogger<AccountsController> logger, IMediator mediator) : ControllerBase
 {
     /// <summary>
@@ -34,8 +36,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpPost]
     [ProducesResponseType(typeof(MbResult<Guid>), 201)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto createAccountDto)
     {
         try
@@ -97,9 +97,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Ошибка сервера</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(MbResult<AccountDto>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> GetAccount(Guid id)
     {
         try
@@ -175,9 +172,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpGet]
     [ProducesResponseType(typeof(MbResult<AccountsDto>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> GetAccounts([FromQuery] AccountFilterDto filter)
     {
         try
@@ -233,9 +227,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpPatch("{id:guid}")]
     [ProducesResponseType(typeof(MbResult<object>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateAccountDto updateDto)
     {
         try
@@ -293,9 +284,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpPatch("{id:guid}/close")]
     [ProducesResponseType(typeof(MbResult<object>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> CloseAccount(Guid id)
     {
         try
@@ -353,9 +341,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(typeof(MbResult<object>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> DeleteAccount(Guid id)
     {
         try
@@ -413,9 +398,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpGet("{accountId:guid}/statement")]
     [ProducesResponseType(typeof(MbResult<AccountStatementResponseDto>), 200)]
-    [ProducesResponseType(typeof(MbResult<object>), 400)]
-    [ProducesResponseType(typeof(MbResult<object>), 404)]
-    [ProducesResponseType(typeof(MbResult<object>), 500)]
     public async Task<IActionResult> GetAccountStatement(Guid accountId, [FromQuery] AccountStatementRequestDto request)
     {
         try

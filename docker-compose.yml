@@ -1,0 +1,37 @@
+services:
+  bank-accounts:
+    image: ${DOCKER_REGISTRY-}bankaccounts
+    build:
+      context: bank-accounts
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - Keycloak__realm=TestRealm
+      - Keycloak__resource=account
+      - Keycloak__auth-server-url=http://localhost:8080/
+      - Keycloak__server-url=http://keycloak:8080/
+      - Keycloak__credentials__secret=aNDf8kbjdZsV0r82a4TsD8PoKYDAE1aQ
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+    depends_on:
+      - keycloak
+    networks:
+      - account-service-network
+      
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.1
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    ports:
+      - "8080:8080"
+    command: ["start-dev"]
+    volumes:
+      - ./keycloak/h2:/opt/keycloak/data/h2
+    networks:
+      - account-service-network
+
+networks:
+  account-service-network:
+    driver: bridge

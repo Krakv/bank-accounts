@@ -4,6 +4,7 @@ using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Transactions.CreateTransaction;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.GetTransaction;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,6 +22,7 @@ namespace bank_accounts.Features.Transactions;
 /// </remarks>
 [ApiController]
 [Route("transactions")]
+[Authorize]
 public class TransactionsController(IMediator mediator, ILogger<TransactionsController> logger) : ControllerBase
 {
 	/// <summary>
@@ -44,9 +46,6 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 	/// <response code="500">Внутренняя ошибка сервера</response>
 	[HttpPost]
 	[ProducesResponseType(typeof(MbResult<List<Guid>>), StatusCodes.Status201Created)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status400BadRequest)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status404NotFound)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status500InternalServerError)]
 	public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
 	{
 		try
@@ -125,9 +124,6 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 	/// <response code="500">Ошибка сервера</response>
 	[HttpGet("{id:guid}")]
 	[ProducesResponseType(typeof(MbResult<TransactionDto>), StatusCodes.Status200OK)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status400BadRequest)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status404NotFound)]
-	[ProducesResponseType(typeof(MbResult<object>), StatusCodes.Status500InternalServerError)]
 	public async Task<IActionResult> GetTransaction(Guid id)
 	{
 		try

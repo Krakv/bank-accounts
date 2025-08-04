@@ -1,11 +1,11 @@
 ﻿using bank_accounts.Exceptions;
-using bank_accounts.Features.Common;
 using bank_accounts.Features.Accounts.GetAccount;
+using bank_accounts.Features.Common;
 using bank_accounts.Features.Transactions.CreateTransaction;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.GetTransaction;
-using Microsoft.AspNetCore.Authorization;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace bank_accounts.Features.Transactions;

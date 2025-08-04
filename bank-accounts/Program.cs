@@ -1,15 +1,15 @@
+using System.Reflection;
+using bank_accounts.Features.Transactions;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
 using bank_accounts.Services.CurrencyService;
 using bank_accounts.Services.VerificationService;
 using FluentValidation;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
-using System.Reflection;
-using bank_accounts.Features.Transactions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,7 +43,13 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Account Service API",
         Version = "v1",
-        Description = "Данные для авторизации:<br><br>Логин - user<br>Пароль - password"
+        Description = """
+                      Данные для авторизации:<br><br>
+                      Логин - user<br>
+                      Пароль - password<br>
+                      Client secret - "aNDf8kbjdZsV0r82a4TsD8PoKYDAE1aQ"<br>
+                      Client ID - account
+                      """
     });
 
     options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme

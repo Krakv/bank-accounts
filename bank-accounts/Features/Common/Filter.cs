@@ -1,4 +1,4 @@
-﻿namespace bank_accounts.Features.Abstract;
+﻿namespace bank_accounts.Features.Common;
 
 public abstract class Filter<TEntity>
 {

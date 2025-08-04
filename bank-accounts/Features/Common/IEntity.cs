@@ -1,4 +1,4 @@
-﻿namespace bank_accounts.Features;
+﻿namespace bank_accounts.Features.Common;
 
 public interface IEntity
 {

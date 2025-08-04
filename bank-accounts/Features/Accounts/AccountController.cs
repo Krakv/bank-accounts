@@ -1,16 +1,16 @@
 ﻿using bank_accounts.Exceptions;
-using bank_accounts.Features.Common;
-using bank_accounts.Features.Accounts.CreateAccount;
 using bank_accounts.Features.Accounts.CloseAccount;
+using bank_accounts.Features.Accounts.CreateAccount;
 using bank_accounts.Features.Accounts.DeleteAccount;
 using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Accounts.GetAccounts;
 using bank_accounts.Features.Accounts.GetAccountStatement;
 using bank_accounts.Features.Accounts.UpdateAccount;
+using bank_accounts.Features.Common;
 using MediatR;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace bank_accounts.Features.Accounts;
 

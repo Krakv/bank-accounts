@@ -1,5 +1,5 @@
-﻿using bank_accounts.Features.Abstract;
-using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Features.Accounts.Entities;
+using bank_accounts.Features.Common;
 
 namespace bank_accounts.Features.Accounts.Dto;
 

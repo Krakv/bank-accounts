@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using bank_accounts.Features.Common;
+using System.ComponentModel.DataAnnotations;
 
 namespace bank_accounts.Features.Transactions.Entities;
 

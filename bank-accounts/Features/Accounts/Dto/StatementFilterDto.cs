@@ -1,4 +1,4 @@
-﻿using bank_accounts.Features.Abstract;
+﻿using bank_accounts.Features.Common;
 using bank_accounts.Features.Transactions.Entities;
 
 namespace bank_accounts.Features.Accounts.Dto;

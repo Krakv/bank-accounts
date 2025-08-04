@@ -1,6 +1,5 @@
 ﻿using System.Linq.Expressions;
-using bank_accounts.Features;
-using bank_accounts.Features.Abstract;
+using bank_accounts.Features.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace bank_accounts.Infrastructure.Repository;

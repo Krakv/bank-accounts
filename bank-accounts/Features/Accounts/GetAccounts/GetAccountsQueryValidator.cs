@@ -1,7 +1,7 @@
-﻿using FluentValidation;
-using JetBrains.Annotations;
+﻿using bank_accounts.Services.CurrencyService;
 using bank_accounts.Services.VerificationService;
-using bank_accounts.Services.CurrencyService;
+using FluentValidation;
+using JetBrains.Annotations;
 
 namespace bank_accounts.Features.Accounts.GetAccounts;
 

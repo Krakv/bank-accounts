@@ -1,15 +1,18 @@
-using System.Reflection;
 using bank_accounts.Features.Transactions;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
 using bank_accounts.Services.CurrencyService;
 using bank_accounts.Services.VerificationService;
 using FluentValidation;
+using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
+using bank_accounts.Services.RecurringOperationsService;
+using Hangfire.PostgreSql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,16 +104,25 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
 builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
+builder.Services.AddSingleton<IRecurringOperationsService, RecurringOperationsService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=bank_accounts.db"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHangfire(config =>
+    config.UsePostgreSqlStorage(options =>
+    {
+        options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("HangfireConnection"));
+    }));
+
+builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 }
 
 if (app.Environment.IsDevelopment())
@@ -130,5 +142,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("AllowAll");
 app.MapControllers();
+
+app.UseHangfireDashboard();
+
+RecurringJob.AddOrUpdate<IRecurringOperationsService>("accrue-deposit-interest", 
+    x => x.AccrueDepositInterest(),
+    Cron.Daily);
 
 await app.RunAsync();

@@ -53,9 +53,9 @@ builder.Services.AddSwaggerGen(options =>
         Title = "Account Service API",
         Version = "v1",
         Description = """
-                      Данные для авторизации:<br><br>
-                      Логин - user<br>
-                      Пароль - password<br>
+                      Р”Р°РЅРЅС‹Рµ РґР»СЏ Р°РІС‚РѕСЂРёР·Р°С†РёРё:<br><br>
+                      Р›РѕРіРёРЅ - user<br>
+                      РџР°СЂРѕР»СЊ - password<br>
                       Client secret - "aNDf8kbjdZsV0r82a4TsD8PoKYDAE1aQ"<br>
                       Client ID - account
                       """

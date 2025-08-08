@@ -1,5 +1,43 @@
 # Сервис банковские счета
 
+## Краткое описание
+
+Сервис предоставляет REST API для управления банковскими счетами и транзакциями. Основные возможности:
+- Создание, изменение и закрытие счетов (депозитных, кредитных, расчетных).
+- Регистрация транзакций (пополнение, списание, переводы между счетами).
+- Получение выписок по счетам.
+- Получение отфильтрованного списка счетов.
+
+## Пошаговая инструкция запуска
+
+### Запуск с docker compose
+
+В проекте "docker-compose" в Visual Studio использовать профиль запуска Docker Compose.
+
+Или в корне проекта запустить командой
+```bash
+docker-compose up -d --build
+```
+
+Страница swagger будет доступна по адресу: `http://localhost:80/swagger`
+
+### Локальный запуск (без Docker)
+
+**Требования:**
+- PostgreSQL запущена на `localhost:5432`
+- Keycloak доступен на `http://localhost:8080`
+
+*Требуется конфигурация, используемая в docker-compose.*
+
+Профиль запуска в Visual Studio - **http**.
+
+Или запустить командой 
+```bash
+dotnet run --project bank-accounts
+```
+
+Страница swagger будет доступна по адресу: `http://localhost:5209/swagger`
+
 ## Архитектура проекта
 
 - **Features** — бизнес-логика:
@@ -10,7 +48,7 @@
 Используются:
 - `MediatR` для CQRS
 - `FluentValidation`
-- `EF Core` + `SQLite`
+- `EF Core` + `PostgreSQL`
 
 ## REST API
 
@@ -164,8 +202,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
   "currency": "EUR",
   "startDate": "2025-03-01",
   "endDate": "2025-03-31",
-  "openingBalance": 100.00,
-  "closingBalance": 350.00,
   "transactions": [
     {
       "id": "GUID",

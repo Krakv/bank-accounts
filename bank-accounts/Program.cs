@@ -99,12 +99,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAccrueInterestService, AccrueInterestService>();
 builder.Services.AddMediatR(cf => cf.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
 builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
-builder.Services.AddSingleton<IRecurringOperationsService, RecurringOperationsService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -145,8 +145,8 @@ app.MapControllers();
 
 app.UseHangfireDashboard();
 
-RecurringJob.AddOrUpdate<IRecurringOperationsService>("accrue-deposit-interest", 
-    x => x.AccrueDepositInterest(),
-    Cron.Daily);
+RecurringJob.AddOrUpdate<IAccrueInterestService>("accrue-deposit-interest", 
+    x => x.AccrueInterestForAllAccountsAsync(),
+    "0 0 * * *");
 
 await app.RunAsync();

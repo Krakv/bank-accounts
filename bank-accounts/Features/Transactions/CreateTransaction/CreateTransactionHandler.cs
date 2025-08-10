@@ -42,7 +42,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         }
     }
 
-    private async Task<Guid[]> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
+    private async Task<Guid[]?> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
     {
         Account account = new() { Id = accountDto.Id, Balance = accountDto.Balance };
         Account counterparty = new() { Id = counterpartyDto.Id, Balance = counterpartyDto.Balance };
@@ -116,6 +116,15 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         await unitOfWork.Transactions.CreateAsync(receiverTransaction);
         await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
         await unitOfWork.Accounts.UpdatePartialAsync(counterparty, x => x.Balance);
+
+        var totalBefore = accountDto.Balance + counterpartyDto.Balance;
+        var totalAfter = account.Balance + counterparty.Balance;
+
+        if (totalBefore != totalAfter)
+        {
+            await unitOfWork.RollbackAsync();
+            return null;
+        }
 
         return [receiverTransaction.Id, senderTransaction.Id];
     }

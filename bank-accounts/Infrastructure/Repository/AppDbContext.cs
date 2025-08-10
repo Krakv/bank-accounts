@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Entities;
+﻿using System.Data;
+using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Entities;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     [UsedImplicitly]
     public async Task<IDbContextTransaction> BeginTransactionAsync()
-        => await Database.BeginTransactionAsync();
+        => await Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseLazyLoadingProxies();
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>()
+            .HasIndex(a => a.OwnerId)
+            .HasMethod("HASH");
+
+        modelBuilder.Entity<Transaction>()
+            .HasIndex(t => new { t.AccountId, t.Date });
+
+        modelBuilder.Entity<Transaction>()
+            .HasIndex(t => t.Date)
+            .HasMethod("GIST");
     }
 }

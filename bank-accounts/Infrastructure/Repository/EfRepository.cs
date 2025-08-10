@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Data;
+using System.Linq.Expressions;
 using bank_accounts.Features.Common;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,5 +54,16 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
     {
         _dbSet.Remove(entity);
         await context.SaveChangesAsync();
+    }
+
+    public async Task AccrueInterestAsync(Guid accountId)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        await context.Database.ExecuteSqlRawAsync(
+            "CALL accrue_interest({0})", accountId
+        );
+
+        await transaction.CommitAsync();
     }
 }

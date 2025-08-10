@@ -1,5 +1,4 @@
 ﻿using bank_accounts.Exceptions;
-using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Common;
 using bank_accounts.Features.Transactions.CreateTransaction;
 using bank_accounts.Features.Transactions.Dto;
@@ -50,23 +49,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 	{
 		try
 		{
-			var accountDto = await mediator.Send(new GetAccountQuery(dto.AccountId), CancellationToken.None);
-
-			if (accountDto == null)
-			{
-				var notFoundResult = new MbResult<object>(
-					"Account not found",
-					StatusCodes.Status404NotFound,
-					new Dictionary<string, string> { { "Account", $"Account with id {dto.AccountId} was not found" } }
-				);
-				return NotFound(notFoundResult);
-			}
-
-			var counterpartyDto = !dto.CounterpartyAccountId.HasValue
-				? null
-				: await mediator.Send(new GetAccountQuery(dto.CounterpartyAccountId.Value), CancellationToken.None);
-
-			var transactionIds = await mediator.Send(new CreateTransactionCommand(dto, accountDto, counterpartyDto));
+			var transactionIds = await mediator.Send(new CreateTransactionCommand(dto));
 
 			if (transactionIds == null)
 			{
@@ -90,7 +73,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 				successResult
 			);
 		}
-		catch (ValidationAppException ex)
+        catch (ValidationAppException ex)
 		{
 			var result = new MbResult<object>(
 				"Validation errors occurred",
@@ -130,24 +113,14 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 		{
 			var transaction = await mediator.Send(new GetTransactionQuery(id), CancellationToken.None);
 
-			if (transaction == null)
-			{
-				var notFoundResult = new MbResult<object>(
-					"Transaction not found",
-					StatusCodes.Status404NotFound,
-					new Dictionary<string, string> { { "Transaction", $"Transaction with id {id} was not found" } }
-				);
-				return NotFound(notFoundResult);
-			}
-
 			var successResult = new MbResult<TransactionDto>(
 				"Transaction retrieved successfully",
 				StatusCodes.Status200OK,
 				transaction
 			);
 			return Ok(successResult);
-		}
-		catch (ValidationAppException ex)
+        }
+        catch (ValidationAppException ex)
 		{
 			var result = new MbResult<object>(
 				"Validation errors occurred",

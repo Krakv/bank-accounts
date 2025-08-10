@@ -89,8 +89,6 @@ dotnet run --project bank-accounts
 
 Ответ (400 BadRequest) - ошибки валидации.
 
-Ответ (404 NotFound) - счёт не найден.
-
 **Если требуется закрыть счет:**
 
 *Информация о счете не удаляется, добавляется значение для поля closingDate, и счет считается закрытым.*
@@ -101,7 +99,6 @@ dotnet run --project bank-accounts
 
 Ответ (400 BadRequest) - ошибки валидации.
 
-Ответ (404 NotFound) - счёт не найден.
 ### 4. Получить список счетов
 
 *По умолчанию возвращаются все счета, отсортированные по дате, требуется использовать фильтрацию*
@@ -150,7 +147,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 ```
 Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found) - счёт не найден.
 ### 5. Зарегистрировать транзакцию по счету
 `POST /transactions`
 
@@ -170,7 +166,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 
 Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found) - транзакция не найдена.
 ### 6.  Выполнить перевод между счётами
 `POST /transactions`
 
@@ -190,7 +185,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 
 Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found) - транзакция не найдена.
 ### 7. Получить выписку
 `GET /accounts/{accountId}/statement?start=2025-03-01&end=2025-03-31`
 
@@ -226,7 +220,6 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 ```
 Ответ (400 Bad Request) - ошибки валидации.
 
-Ответ (404 Not Found): счет не найден.
 ### 8. Проверка счетов у клиента
 `GET /accounts?ownerId=123`
 
@@ -258,5 +251,3 @@ GET /accounts?ownerId=123&type=Deposit&currency=EUR&page=2&pageSize=50
 }
 ```
 Ответ (400 Bad Request) - ошибки валидации.
-
-Ответ (404 Not Found) - счёт не найден.

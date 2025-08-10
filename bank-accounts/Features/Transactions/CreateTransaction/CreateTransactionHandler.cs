@@ -1,22 +1,22 @@
-﻿using bank_accounts.Features.Accounts.Dto;
-using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
+using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
-public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateTransactionCommand, Guid[]?>
+public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Account> accountRepository) : IRequestHandler<CreateTransactionCommand, Guid[]?>
 {
     public async Task<Guid[]?> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var dto = request.CreateTransactionDto;
-        var account = request.Account;
-        var counterpartyAccount = request.CounterpartyAccount;
+        var account = (await accountRepository.GetByIdAsync(dto.AccountId))!;
+        Account? counterpartyAccount = null;
 
-        if (counterpartyAccount == null && dto.CounterpartyAccountId.HasValue)
-            return null;
-            
+        if (dto.CounterpartyAccountId.HasValue)
+            counterpartyAccount = await accountRepository.GetByIdAsync(dto.CounterpartyAccountId.Value);
+
         await unitOfWork.BeginTransactionAsync();
 
         try
@@ -42,7 +42,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         }
     }
 
-    private async Task<Guid[]?> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
+    private async Task<Guid[]?> ProcessTransferAsync(CreateTransactionDto dto, Account accountDto, Account counterpartyDto)
     {
         Account account = new() { Id = accountDto.Id, Balance = accountDto.Balance };
         Account counterparty = new() { Id = counterpartyDto.Id, Balance = counterpartyDto.Balance };
@@ -120,16 +120,13 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         var totalBefore = accountDto.Balance + counterpartyDto.Balance;
         var totalAfter = account.Balance + counterparty.Balance;
 
-        if (totalBefore != totalAfter)
-        {
-            await unitOfWork.RollbackAsync();
-            return null;
-        }
+        if (totalBefore == totalAfter) return [receiverTransaction.Id, senderTransaction.Id];
+        await unitOfWork.RollbackAsync();
+        return null;
 
-        return [receiverTransaction.Id, senderTransaction.Id];
     }
 
-    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, AccountDto accountDto)
+    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, Account accountDto)
     {
         var transaction = new Transaction
         {

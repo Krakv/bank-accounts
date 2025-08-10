@@ -1,5 +1,6 @@
 ﻿using bank_accounts.Features.Common;
 using System.ComponentModel.DataAnnotations;
+using JetBrains.Annotations;
 
 namespace bank_accounts.Features.Accounts.Entities;
 
@@ -18,6 +19,10 @@ public class Account : IEntity
     public decimal? InterestRate { get; set; }
     public DateTime OpeningDate { get; set; } = DateTime.UtcNow;
     public DateTime? ClosingDate { get; set; }
+
+    [UsedImplicitly]
+    [Timestamp]
+    public uint Version { get; set; }
 
 #if false
         public virtual List<Transaction>? Transactions { get; set; }

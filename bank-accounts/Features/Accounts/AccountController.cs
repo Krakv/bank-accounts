@@ -11,6 +11,7 @@ using bank_accounts.Features.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace bank_accounts.Features.Accounts;
 
@@ -261,6 +262,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
             );
             return BadRequest(result);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var result = new MbResult<object>(
+                "Account was updated by another request",
+                StatusCodes.Status409Conflict,
+                ex.Message
+            );
+            return Conflict(result);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error updating interest rate for account {Id}", id);
@@ -318,6 +328,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
             );
             return BadRequest(result);
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var result = new MbResult<object>(
+                "Account was updated by another request",
+                StatusCodes.Status409Conflict,
+                ex.Message
+            );
+            return Conflict(result);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error closing account {Id}", id);
@@ -374,6 +393,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 ex.Errors
             );
             return BadRequest(result);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var result = new MbResult<object>(
+                "Account was updated by another request",
+                StatusCodes.Status409Conflict,
+                ex.Message
+            );
+            return Conflict(result);
         }
         catch (Exception ex)
         {

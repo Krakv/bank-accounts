@@ -6,6 +6,7 @@ using bank_accounts.Features.Transactions.GetTransaction;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace bank_accounts.Features.Transactions;
 
@@ -41,7 +42,6 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 	/// </remarks>
 	/// <response code="201">Транзакция успешно создана</response>
 	/// <response code="400">Невалидные данные запроса</response>
-	/// <response code="404">Счет не найден</response>
 	/// <response code="500">Внутренняя ошибка сервера</response>
 	[HttpPost]
 	[ProducesResponseType(typeof(MbResult<List<Guid>>), StatusCodes.Status201Created)]
@@ -82,7 +82,16 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 			);
 			return BadRequest(result);
 		}
-		catch (Exception ex)
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var result = new MbResult<object>(
+                "Account was updated by another request",
+                StatusCodes.Status409Conflict,
+                ex.Message
+            );
+            return Conflict(result);
+        }
+        catch (Exception ex)
 		{
 			logger.LogError(ex, "Error creating transaction");
 			var result = new MbResult<object>(
@@ -103,7 +112,6 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 	/// <param name="id">Идентификатор транзакции (GUID)</param>
 	/// <response code="200">Возвращает данные транзакции</response>
 	/// <response code="400">Невалидный ID транзакции</response>
-	/// <response code="404">Транзакция не найдена</response>
 	/// <response code="500">Ошибка сервера</response>
 	[HttpGet("{id:guid}")]
 	[ProducesResponseType(typeof(MbResult<TransactionDto>), StatusCodes.Status200OK)]

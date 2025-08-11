@@ -2,17 +2,19 @@ using bank_accounts.Features.Transactions;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
 using bank_accounts.Services.CurrencyService;
+using bank_accounts.Services.AccrueInterestService;
 using bank_accounts.Services.VerificationService;
 using FluentValidation;
 using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using bank_accounts.Services.RecurringOperationsService;
-using Hangfire.PostgreSql;
+using bank_accounts;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -146,7 +148,13 @@ app.UseAuthorization();
 app.UseCors("AllowAll");
 app.MapControllers();
 
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new List<IDashboardAuthorizationFilter>
+    {
+        new AllowAllDashboardAuthorizationFilter()
+    }
+});
 
 RecurringJob.AddOrUpdate<IAccrueInterestService>("accrue-deposit-interest", 
     x => x.AccrueInterestForAllAccountsAsync(),

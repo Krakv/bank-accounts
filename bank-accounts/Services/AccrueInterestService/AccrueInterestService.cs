@@ -4,7 +4,7 @@ using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccounts;
 using MediatR;
 
-namespace bank_accounts.Services.RecurringOperationsService;
+namespace bank_accounts.Services.AccrueInterestService;
 
 public class AccrueInterestService(IMediator mediator, ILogger<AccrueInterestService> logger) : IAccrueInterestService
 {

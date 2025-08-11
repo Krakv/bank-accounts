@@ -1,4 +1,4 @@
-﻿namespace bank_accounts.Services.RecurringOperationsService;
+﻿namespace bank_accounts.Services.AccrueInterestService;
 
 public interface IAccrueInterestService
 {

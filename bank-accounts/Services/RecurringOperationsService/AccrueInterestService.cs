@@ -1,42 +1,32 @@
 ﻿
+using bank_accounts.Features.Accounts.AccrueInterest;
 using bank_accounts.Features.Accounts.Dto;
-using bank_accounts.Features.Accounts.Entities;
-using bank_accounts.Infrastructure.Repository;
+using bank_accounts.Features.Accounts.GetAccounts;
+using MediatR;
 
 namespace bank_accounts.Services.RecurringOperationsService;
 
-public class AccrueInterestService(IRepository<Account> accountRepository, ILogger<AccrueInterestService> logger) : IAccrueInterestService
+public class AccrueInterestService(IMediator mediator, ILogger<AccrueInterestService> logger) : IAccrueInterestService
 {
     public async Task AccrueInterestForAllAccountsAsync()
     {
         try
         {
-            var filter = new AccountFilterDto { MinInterestRate = 1, Type = "Deposit" };
-            
-            var depositAccounts = (await accountRepository
-                .GetFilteredAsync(filter)).data;
+            var filter = new AccountFilterDto { MinInterestRate = (decimal)0.01, Type = "Deposit" };
 
-            foreach (var account in depositAccounts)
+            var depositAccounts = (await mediator.Send(new GetAccountsQuery(filter))).Accounts;
+
+            if (depositAccounts != null)
             {
-                try
+                foreach (var account in depositAccounts)
                 {
-                    await accountRepository.AccrueInterestAsync(account.Id);
-                    logger.LogInformation(
-                        "Начислены проценты по счету {AccountId}",
-                        account.Id);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex,
-                        "Ошибка при начислении процентов по счету {AccountId}",
-                        account.Id);
+                    await mediator.Send(new AccrueInterestCommand(account.Id));
                 }
             }
         }
-        catch (Exception ex)
+        catch(Exception ex)
         {
-            logger.LogError(ex, "Ошибка в сервисе начисления процентов");
-            throw;
+            logger.LogError(ex, "AccrueInterest operation: error occurred.");
         }
     }
 }

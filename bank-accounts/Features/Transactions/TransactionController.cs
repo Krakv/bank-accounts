@@ -86,8 +86,8 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
             var result = new MbResult<object>(
                 "Account was updated by another request",
                 StatusCodes.Status409Conflict,
-                ex.Message
-            );
+                new Dictionary<string, string>{ {"AccountId", ex.Message} }
+                );
             return Conflict(result);
         }
         catch (Exception ex)

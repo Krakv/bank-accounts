@@ -145,8 +145,8 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("AllowAll");
-app.MapGet("/index.html", () => Results.Redirect("/swagger"));
-app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/index.html", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapControllers();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions

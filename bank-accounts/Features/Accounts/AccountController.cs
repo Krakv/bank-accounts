@@ -6,6 +6,7 @@ using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccount;
 using bank_accounts.Features.Accounts.GetAccounts;
 using bank_accounts.Features.Accounts.GetAccountStatement;
+using bank_accounts.Features.Accounts.GetAccountStatementAndExplainAnalyze;
 using bank_accounts.Features.Accounts.UpdateAccount;
 using bank_accounts.Features.Common;
 using MediatR;
@@ -446,6 +447,64 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 CancellationToken.None);
 
             var successResult = new MbResult<AccountStatementResponseDto>(
+                "Account statement retrieved successfully",
+                StatusCodes.Status200OK,
+                statement
+            );
+            return Ok(successResult);
+        }
+        catch (ValidationAppException ex)
+        {
+            var result = new MbResult<object>(
+                "Validation errors occurred",
+                StatusCodes.Status400BadRequest,
+                ex.Errors
+            );
+            return BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting account statement");
+            var result = new MbResult<object>(
+                "Internal server error",
+                StatusCodes.Status500InternalServerError,
+                new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
+            );
+            return StatusCode(500, result);
+        }
+    }
+
+    /// <summary>
+    /// Получить выписку по счету за указанный период с Explain Analyze
+    /// </summary>
+    /// <param name="accountId">Идентификатор счета (GUID)</param>
+    /// <param name="request">Параметры запроса выписки</param>
+    /// <response code="200">Возвращает выписку по счету</response>
+    /// <response code="400">Невалидные параметры запроса</response>
+    /// <response code="404">Счет не найден</response>
+    /// <response code="500">Внутренняя ошибка сервера</response>
+    [HttpGet("{accountId:guid}/statement/explain_analyze")]
+    [ProducesResponseType(typeof(MbResult<string>), 200)]
+    public async Task<IActionResult> GetAccountStatementWithExplainAnalyze(Guid accountId, [FromQuery] AccountStatementRequestDto request)
+    {
+        try
+        {
+            var account = await mediator.Send(new GetAccountQuery(accountId), CancellationToken.None);
+
+            if (account == null)
+            {
+                var notFoundResult = new MbResult<object>(
+                    "Account not found",
+                    StatusCodes.Status404NotFound,
+                    new Dictionary<string, string> { { "Account", $"Account with id {accountId} was not found" } }
+                );
+                return NotFound(notFoundResult);
+            }
+
+            var statement = await mediator.Send(new GetAccountStatementAndExplainAnalyzeQuery(accountId, request),
+                CancellationToken.None);
+
+            var successResult = new MbResult<string>(
                 "Account statement retrieved successfully",
                 StatusCodes.Status200OK,
                 statement

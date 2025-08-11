@@ -3,4 +3,4 @@ using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
-public record CreateTransactionCommand(CreateTransactionDto CreateTransactionDto) : IRequest<Guid[]?>;
+public record CreateTransactionCommand(CreateTransactionDto CreateTransactionDto) : IRequest<Guid[]>;

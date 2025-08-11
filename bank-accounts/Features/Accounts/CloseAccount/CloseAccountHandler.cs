@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
@@ -8,7 +9,11 @@ public class CloseAccountHandler(IRepository<Account> accountRepository) : IRequ
 {
     public async Task Handle(CloseAccountCommand request, CancellationToken cancellationToken)
     {
-        var account = (await accountRepository.GetByIdAsync(request.AccountId))!;
+        var account = await accountRepository.GetByIdAsync(request.AccountId);
+        if (account == null)
+        {
+            throw new NotFoundAppException("Account", request.AccountId);
+        }
         account.ClosingDate = DateTime.UtcNow;
         await accountRepository.Update(account);
 

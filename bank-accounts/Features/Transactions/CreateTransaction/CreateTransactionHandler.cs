@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
@@ -6,16 +7,27 @@ using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
-public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Account> accountRepository) : IRequestHandler<CreateTransactionCommand, Guid[]?>
+public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Account> accountRepository) : IRequestHandler<CreateTransactionCommand, Guid[]>
 {
-    public async Task<Guid[]?> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<Guid[]> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var dto = request.CreateTransactionDto;
-        var account = (await accountRepository.GetByIdAsync(dto.AccountId))!;
+        var account = await accountRepository.GetByIdAsync(dto.AccountId);
+        if (account == null)
+        {
+            throw new NotFoundAppException("Account", dto.AccountId);
+        }
         Account? counterpartyAccount = null;
 
         if (dto.CounterpartyAccountId.HasValue)
+        {
             counterpartyAccount = await accountRepository.GetByIdAsync(dto.CounterpartyAccountId.Value);
+            if (counterpartyAccount == null)
+            {
+                throw new NotFoundAppException("Account", dto.CounterpartyAccountId.Value);
+            }
+        }
+            
 
         await unitOfWork.BeginTransactionAsync();
 
@@ -32,6 +44,11 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
             else
                 result = await ProcessSingleTransactionAsync(dto, account);
 
+            if (result == null)
+            {
+                throw new ValidationAppException(new Dictionary<string, string>
+                    { { "Transaction", "Failed to create transaction" } });
+            }
             await unitOfWork.CommitAsync();
             return result;
         }

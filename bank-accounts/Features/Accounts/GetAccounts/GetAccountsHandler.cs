@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Dto;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
@@ -18,6 +19,11 @@ public class GetAccountsHandler(IRepository<Account> accountRepository) : IReque
         }
 
         var (accounts, totalCount) = await accountRepository.GetFilteredAsync(filter);
+
+        if (totalCount == 0)
+        {
+            throw new NotFoundAppException("Account was not found");
+        }
 
         var accountsDto = accounts.Select(account => new AccountDto
         {

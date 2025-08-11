@@ -41,6 +41,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
     /// </remarks>
     /// <response code="201">Транзакция успешно создана</response>
     /// <response code="400">Невалидные данные запроса</response>
+    /// <response code="404">Счёт не найден</response>
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpPost]
 	[ProducesResponseType(typeof(MbResult<List<Guid>>), StatusCodes.Status201Created)]
@@ -49,16 +50,6 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 		try
 		{
 			var transactionIds = await mediator.Send(new CreateTransactionCommand(dto));
-
-			if (transactionIds == null)
-			{
-				var errorResult = new MbResult<object>(
-					"Transaction creation failed",
-					StatusCodes.Status400BadRequest,
-					new Dictionary<string, string> { { "Transaction", "Failed to create transaction" } }
-				);
-				return BadRequest(errorResult);
-			}
 
 			var successResult = new MbResult<Guid[]>(
 				"Transaction created successfully",
@@ -102,17 +93,18 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 		}
 	}
 
-	/// <summary>
-	/// Получить информацию о транзакции по ID
-	/// </summary>
-	/// <remarks>
-	/// Возвращает полные данные о конкретной транзакции по её идентификатору.
-	/// </remarks>
-	/// <param name="id">Идентификатор транзакции (GUID)</param>
-	/// <response code="200">Возвращает данные транзакции</response>
-	/// <response code="400">Невалидный ID транзакции</response>
-	/// <response code="500">Ошибка сервера</response>
-	[HttpGet("{id:guid}")]
+    /// <summary>
+    /// Получить информацию о транзакции по ID
+    /// </summary>
+    /// <remarks>
+    /// Возвращает полные данные о конкретной транзакции по её идентификатору.
+    /// </remarks>
+    /// <param name="id">Идентификатор транзакции (GUID)</param>
+    /// <response code="200">Возвращает данные транзакции</response>
+    /// <response code="400">Невалидный ID транзакции</response>
+    /// <response code="404">Транзакция не найдена</response>
+    /// <response code="500">Ошибка сервера</response>
+    [HttpGet("{id:guid}")]
 	[ProducesResponseType(typeof(MbResult<TransactionDto>), StatusCodes.Status200OK)]
 	public async Task<IActionResult> GetTransaction(Guid id)
 	{
@@ -136,7 +128,16 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
 			);
 			return BadRequest(result);
 		}
-		catch (Exception ex)
+        catch (NotFoundAppException ex)
+        {
+            var notFoundResult = new MbResult<object>(
+                ex.Message,
+                StatusCodes.Status404NotFound,
+                new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
+            );
+            return NotFound(notFoundResult);
+        }
+        catch (Exception ex)
 		{
 			logger.LogError(ex, "Error getting transaction");
 			var result = new MbResult<object>(

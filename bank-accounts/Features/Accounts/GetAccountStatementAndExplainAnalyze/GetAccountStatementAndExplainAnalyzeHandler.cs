@@ -1,4 +1,5 @@
-﻿using bank_accounts.Infrastructure.Repository;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Infrastructure.Repository;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,9 @@ public class GetAccountStatementAndExplainAnalyzeHandler(AppDbContext context)
 
         var account = await context.Accounts.FindAsync([accountId], cancellationToken);
         if (account == null)
-            return null;
+        {
+            throw new NotFoundAppException("Account", request.AccountId);
+        }
 
         var explainSql = $"""
                               EXPLAIN ANALYZE

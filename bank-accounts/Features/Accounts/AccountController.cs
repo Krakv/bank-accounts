@@ -105,16 +105,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         {
             var accountDto = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
 
-            if (accountDto == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {id} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             var result = new MbResult<AccountDto>(
                 "Account retrieved successfully",
                 StatusCodes.Status200OK,
@@ -130,6 +120,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 ex.Errors
             );
             return BadRequest(result);
+        }
+        catch (NotFoundAppException ex)
+        {
+            var notFoundResult = new MbResult<object>(
+                ex.Message,
+                StatusCodes.Status404NotFound,
+                new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
+            );
+            return NotFound(notFoundResult);
         }
         catch (Exception ex)
         {
@@ -180,16 +179,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         {
             var accountsResult = await mediator.Send(new GetAccountsQuery(filter), CancellationToken.None);
 
-            if (accountsResult.Accounts == null || !accountsResult.Accounts.Any())
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Accounts not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Accounts", "No accounts matching the criteria were found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             var successResult = new MbResult<AccountsDto>(
                 "Accounts retrieved successfully",
                 StatusCodes.Status200OK,
@@ -205,6 +194,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 ex.Errors
             );
             return BadRequest(result);
+        }
+        catch (NotFoundAppException ex)
+        {
+            var notFoundResult = new MbResult<object>(
+                ex.Message,
+                StatusCodes.Status404NotFound,
+                new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
+            );
+            return NotFound(notFoundResult);
         }
         catch (Exception ex)
         {
@@ -235,16 +233,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         {
             var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
 
-            if (account == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {id} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             await mediator.Send(new UpdateAccountCommand(id, updateDto, account.Type), CancellationToken.None);
 
             var successResult = new MbResult<Guid>(
@@ -262,6 +250,15 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 ex.Errors
             );
             return BadRequest(result);
+        }
+        catch (NotFoundAppException ex)
+        {
+            var notFoundResult = new MbResult<object>(
+                ex.Message,
+                StatusCodes.Status404NotFound,
+                new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
+            );
+            return NotFound(notFoundResult);
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -299,18 +296,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     {
         try
         {
-            var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
-
-            if (account == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {id} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             await mediator.Send(new CloseAccountCommand(id), CancellationToken.None);
 
             var successResult = new MbResult<Guid>(
@@ -365,18 +350,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     {
         try
         {
-            var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
-
-            if (account == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {id} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             await mediator.Send(new DeleteAccountCommand(id), CancellationToken.None);
 
             var successResult = new MbResult<Guid>(
@@ -431,18 +404,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     {
         try
         {
-            var account = await mediator.Send(new GetAccountQuery(accountId), CancellationToken.None);
-
-            if (account == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {accountId} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             var statement = await mediator.Send(new GetAccountStatementQuery(accountId, request),
                 CancellationToken.None);
 
@@ -489,18 +450,6 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     {
         try
         {
-            var account = await mediator.Send(new GetAccountQuery(accountId), CancellationToken.None);
-
-            if (account == null)
-            {
-                var notFoundResult = new MbResult<object>(
-                    "Account not found",
-                    StatusCodes.Status404NotFound,
-                    new Dictionary<string, string> { { "Account", $"Account with id {accountId} was not found" } }
-                );
-                return NotFound(notFoundResult);
-            }
-
             var statement = await mediator.Send(new GetAccountStatementAndExplainAnalyzeQuery(accountId, request),
                 CancellationToken.None);
 

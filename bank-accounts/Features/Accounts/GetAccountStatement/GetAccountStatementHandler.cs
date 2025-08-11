@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Dto;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
@@ -23,7 +24,7 @@ public class GetAccountStatementHandler(IRepository<Account> accountRepository, 
         var account = await accountRepository.GetByIdAsync(filter.AccountId);
         if (account == null)
         {
-            return null;
+            throw new NotFoundAppException("Account", request.AccountId);
         }
 
         var transactions= (await transactionRepository

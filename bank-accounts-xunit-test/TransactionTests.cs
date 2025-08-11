@@ -83,7 +83,7 @@ public class TransactionTests : IAsyncLifetime
 
         // Assert
         var updatedAccount = await _mediator.Send(new GetAccountQuery(account));
-        Assert.Equal(100, updatedAccount?.Balance);
+        Assert.Equal(100, updatedAccount.Balance);
     }
 
     [Fact]
@@ -124,8 +124,8 @@ public class TransactionTests : IAsyncLifetime
         var updatedAccountFrom = await _mediator.Send(new GetAccountQuery(accountFrom));
         var updatedAccountTo = await _mediator.Send(new GetAccountQuery(accountTo));
 
-        Assert.Equal(50, updatedAccountFrom?.Balance);
-        Assert.Equal(50, updatedAccountTo?.Balance);
+        Assert.Equal(50, updatedAccountFrom.Balance);
+        Assert.Equal(50, updatedAccountTo.Balance);
     }
 
     [Fact]

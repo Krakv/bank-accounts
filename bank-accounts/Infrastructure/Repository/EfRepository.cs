@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Linq.Expressions;
 using bank_accounts.Features.Common;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,13 +34,9 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
         return (data, totalCount);
     }
 
-    public async Task UpdatePartialAsync<TProperty>(TEntity entity, Expression<Func<TEntity, TProperty>> propertyExpression)
+    public async Task Update(TEntity entity)
     {
-        var existingEntity = await context.FindAsync<TEntity>(entity.Id);
-        if (existingEntity != null) context.Entry(existingEntity).State = EntityState.Detached;
-
-        _dbSet.Attach(entity);
-        context.Entry(entity).Property(propertyExpression).IsModified = true;
+        _dbSet.Update(entity);
         await context.SaveChangesAsync();
     }
 

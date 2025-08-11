@@ -114,8 +114,14 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
             
         await unitOfWork.Transactions.CreateAsync(senderTransaction);
         await unitOfWork.Transactions.CreateAsync(receiverTransaction);
-        await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
-        await unitOfWork.Accounts.UpdatePartialAsync(counterparty, x => x.Balance);
+
+        var accountEntity = (await unitOfWork.Accounts.GetByIdAsync(account.Id))!;
+        accountEntity.Balance = account.Balance;
+        await unitOfWork.Accounts.Update(accountEntity);
+
+        var counterpartyEntity = (await unitOfWork.Accounts.GetByIdAsync(counterparty.Id))!;
+        counterpartyEntity.Balance = counterparty.Balance;
+        await unitOfWork.Accounts.Update(counterpartyEntity);
 
         var totalBefore = accountDto.Balance + counterpartyDto.Balance;
         var totalAfter = account.Balance + counterparty.Balance;
@@ -146,7 +152,10 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
             : account.Balance + dto.Value;
 
         await unitOfWork.Transactions.CreateAsync(transaction);
-        await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
+
+        var accountEntity = (await unitOfWork.Accounts.GetByIdAsync(account.Id))!;
+        accountEntity.Balance = account.Balance;
+        await unitOfWork.Accounts.Update(accountEntity);
 
         return [transaction.Id];
     }

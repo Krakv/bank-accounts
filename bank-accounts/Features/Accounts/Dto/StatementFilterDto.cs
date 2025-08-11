@@ -21,7 +21,7 @@ public class StatementFilterDto : Filter<Transaction>
     public DateTime StartDate { get; set; }
 
     /// <summary>
-    /// Конечная дата периода (невключительно)
+    /// Конечная дата периода (не включительно)
     /// </summary>
     /// <example>2025-01-31</example>
     public DateTime EndDate { get; set; }

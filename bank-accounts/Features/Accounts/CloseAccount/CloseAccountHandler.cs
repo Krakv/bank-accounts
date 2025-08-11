@@ -8,10 +8,9 @@ public class CloseAccountHandler(IRepository<Account> accountRepository) : IRequ
 {
     public async Task Handle(CloseAccountCommand request, CancellationToken cancellationToken)
     {
-        await accountRepository.UpdatePartialAsync(
-            new Account { Id = request.AccountId, ClosingDate = DateTime.UtcNow },
-            x => x.ClosingDate
-        );
+        var account = (await accountRepository.GetByIdAsync(request.AccountId))!;
+        account.ClosingDate = DateTime.UtcNow;
+        await accountRepository.Update(account);
 
         await accountRepository.SaveChangesAsync();
     }

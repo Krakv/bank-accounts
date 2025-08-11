@@ -142,10 +142,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseCors("AllowAll");
+app.MapGet("/index.html", () => Results.Redirect("/swagger"));
+app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapControllers();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions

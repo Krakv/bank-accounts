@@ -5,7 +5,7 @@
       "commandVersion": "1.0",
       "composeLaunchAction": "LaunchBrowser",
       "composeLaunchServiceName": "bank-accounts",
-      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}/swagger",
+      "composeLaunchUrl": "{Scheme}://localhost:{ServicePort}",
       "serviceActions": {
         "bank-accounts": "StartDebugging",
         "keycloak": "StartWithoutDebugging"

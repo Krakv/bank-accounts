@@ -16,8 +16,8 @@ public class GetAccountStatementHandler(IRepository<Account> accountRepository, 
         var filter = new StatementFilterDto
         {
             AccountId = accountId,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate
+            StartDate = dto.StartDate.ToUniversalTime(),
+            EndDate = dto.EndDate.ToUniversalTime()
         };
 
         var account = await accountRepository.GetByIdAsync(filter.AccountId);

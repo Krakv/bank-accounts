@@ -78,11 +78,19 @@ public class ParallelTransferTests : IAsyncLifetime
 
         // Act
         var tasks = Enumerable.Range(0, 50).Select(_ => Transfer(acc1, acc2, 10));
-        await Task.WhenAll(tasks);
+        var enumerable = tasks.ToList();
+        await Task.WhenAll(enumerable);
 
         // Assert
         var totalAfter = await GetTotalBalance();
         Assert.Equal(totalBefore, totalAfter);
+        Assert.All(enumerable, task =>
+        {
+            Assert.True(
+                task.Result.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.Created,
+                $"Unexpected status code: {task.Result.StatusCode}"
+            );
+        });
     }
 
     private async Task<Guid> CreateAccount(decimal balance)
@@ -111,7 +119,7 @@ public class ParallelTransferTests : IAsyncLifetime
         return result.Value;
     }
 
-    private async Task Transfer(Guid from, Guid to, decimal amount)
+    private async Task<HttpResponseMessage> Transfer(Guid from, Guid to, decimal amount)
     {
         var dto = new CreateTransactionDto
         {
@@ -122,15 +130,7 @@ public class ParallelTransferTests : IAsyncLifetime
             Currency = "USD"
         };
 
-        var resp = await _client.PostAsJsonAsync("/transactions", dto);
-
-        if (resp.StatusCode == HttpStatusCode.Conflict)
-        {
-            Console.WriteLine($"Conflict detected for transfer from {from} to {to}");
-            return;
-        }
-
-        resp.EnsureSuccessStatusCode();
+        return await _client.PostAsJsonAsync("/transactions", dto);
     }
 
     private async Task<decimal> GetTotalBalance()

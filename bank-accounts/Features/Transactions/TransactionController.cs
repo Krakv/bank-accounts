@@ -25,25 +25,24 @@ namespace bank_accounts.Features.Transactions;
 [Authorize]
 public class TransactionsController(IMediator mediator, ILogger<TransactionsController> logger) : ControllerBase
 {
-	/// <summary>
-	/// Создать новую транзакцию
-	/// </summary>
-	/// <remarks>
-	/// <para>Поддерживаемые операции:</para>
-	/// 
-	/// <para>1. Внутренние операции</para>
-	/// <para>   Пополнения/списания средств</para>
-	/// <para>   Параметр: counterpartyAccountId = null</para>
-	/// 
-	/// <para>2. Межсчетные переводы</para>
-	/// <para>   Переводы между счетами</para>
-	/// <para>   Параметр: counterpartyAccountId (указание счета-получателя)</para>
-	/// <para>   Результат: создает парные транзакции (списание + зачисление)</para>
-	/// </remarks>
-	/// <response code="201">Транзакция успешно создана</response>
-	/// <response code="400">Невалидные данные запроса</response>
-	/// <response code="500">Внутренняя ошибка сервера</response>
-	[HttpPost]
+    /// <summary>
+    /// Создать новую транзакцию
+    /// </summary>
+    /// <remarks>
+    /// <para>Поддерживаемые операции:</para>
+    /// 
+    /// <para>1. Внутренние операции</para>
+    /// <para>   Пополнения/списания средств</para>
+    /// <para>   Параметр: counterpartyAccountId = null</para>
+    /// 
+    /// <para>2. Переводы между счетами</para>
+    /// <para>   Параметр: counterpartyAccountId (указание счета-получателя)</para>
+    /// <para>   Результат: создает парные транзакции (списание + зачисление)</para>
+    /// </remarks>
+    /// <response code="201">Транзакция успешно создана</response>
+    /// <response code="400">Невалидные данные запроса</response>
+    /// <response code="500">Внутренняя ошибка сервера</response>
+    [HttpPost]
 	[ProducesResponseType(typeof(MbResult<List<Guid>>), StatusCodes.Status201Created)]
 	public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
 	{

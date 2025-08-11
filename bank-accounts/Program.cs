@@ -14,30 +14,33 @@ using System.Reflection;
 using bank_accounts.Services.RecurringOperationsService;
 using Hangfire.PostgreSql;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 var keycloakConfig = builder.Configuration.GetSection("Keycloak");
 
 builder.Services.AddControllers();
-
-builder.Services.AddAuthentication(options =>
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-    .AddJwtBearer(options =>
-    {
-        options.Authority = $"{keycloakConfig["server-url"]}realms/{keycloakConfig["realm"]}";
-        options.Audience = keycloakConfig["resource"];
-        options.RequireHttpsMetadata = false;
-        options.TokenValidationParameters = new TokenValidationParameters
+    builder.Services.AddAuthentication(options =>
         {
-            ValidateIssuer = false,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true
-        };
-    });
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.Authority = $"{keycloakConfig["server-url"]}realms/{keycloakConfig["realm"]}";
+            options.Audience = keycloakConfig["resource"];
+            options.RequireHttpsMetadata = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true
+            };
+        });
+}
 builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
@@ -150,3 +153,5 @@ RecurringJob.AddOrUpdate<IAccrueInterestService>("accrue-deposit-interest",
     "0 0 * * *");
 
 await app.RunAsync();
+
+public partial class Program;

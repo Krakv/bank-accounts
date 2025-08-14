@@ -27,28 +27,45 @@ namespace bank_accounts.Features.Common;
 ///         }
 ///     }
 /// </remarks>
-public class MbResult<T>(string title, int statusCode, T? value)
+public class MbResult<T>
 {
+    /// <summary>
+    /// Конструктор для успешного результата
+    /// </summary>
+    [JsonConstructor]
+    public MbResult(string title, int statusCode, T? value, IReadOnlyDictionary<string, string>? errors = null)
+    {
+        Title = title;
+        StatusCode = statusCode;
+        Value = value;
+        Errors = errors;
+    }
+
+    /// <summary>
+    /// Конструктор для результата с ошибками
+    /// </summary>
+    public MbResult(string title, int statusCode, IReadOnlyDictionary<string, string> errors)
+        : this(title, statusCode, default, errors)
+    {
+    }
+
     /// <summary>
     /// Заголовок, описывающий результат операции.
     /// </summary>
     /// <example>Account created successfully</example>
-    [JsonInclude]
-    public string Title { get; } = title;
+    public string Title { get; }
 
     /// <summary>
     /// HTTP-статус код результата.
     /// </summary>
     /// <example>201</example>
-    [JsonInclude]
-    public int StatusCode { get; } = statusCode;
+    public int StatusCode { get; }
 
     /// <summary>
     /// Основное возвращаемое значение операции.
     /// </summary>
     /// <example>3fa85f64-5717-4562-b3fc-2c963f66afa6</example>
-    [JsonInclude]
-    public T? Value { get; } = value;
+    public T? Value { get; }
 
     /// <summary>
     /// Словарь ошибок, если операция завершилась с ошибками.
@@ -59,26 +76,5 @@ public class MbResult<T>(string title, int statusCode, T? value)
     ///     "Type": "Invalid account type."
     /// }
     /// </example>
-    [JsonInclude]
     public IReadOnlyDictionary<string, string>? Errors { get; }
-
-    /// <summary>
-    /// Конструктор для результата с ошибками.
-    /// </summary>
-    /// <param name="title">Заголовок результата.</param>
-    /// <example>Validation errors occurred</example>
-    /// <param name="statusCode">HTTP-статус код.</param>
-    /// <example>400</example>
-    /// <param name="errors">Словарь ошибок (ключ — название ошибки, значение — описание).</param>
-    /// <example>
-    /// {
-    ///     "OwnerId": "The OwnerId field is required.",
-    ///     "Type": "Invalid account type."
-    /// }
-    /// </example>
-    public MbResult(string title, int statusCode, IReadOnlyDictionary<string, string> errors)
-        : this(title, statusCode, default(T?))
-    {
-        Errors = errors;
-    }
 }

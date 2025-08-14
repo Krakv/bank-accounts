@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
@@ -9,8 +10,11 @@ public class DeleteAccountHandler(IRepository<Account> accountRepository) : IReq
     public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
         var account = await accountRepository.GetByIdAsync(request.AccountId);
-
-        if (account != null) await accountRepository.DeleteAsync(account);
+        if (account == null)
+        {
+            throw new NotFoundAppException("Account", request.AccountId);
+        }
+        await accountRepository.DeleteAsync(account);
 
         await accountRepository.SaveChangesAsync();
     }

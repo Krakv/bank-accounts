@@ -1,22 +1,34 @@
-﻿using bank_accounts.Features.Accounts.Dto;
+﻿using bank_accounts.Exceptions;
 using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
+using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
-public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<CreateTransactionCommand, Guid[]?>
+public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Account> accountRepository) : IRequestHandler<CreateTransactionCommand, Guid[]>
 {
-    public async Task<Guid[]?> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
+    public async Task<Guid[]> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var dto = request.CreateTransactionDto;
-        var account = request.Account;
-        var counterpartyAccount = request.CounterpartyAccount;
+        var account = await accountRepository.GetByIdAsync(dto.AccountId);
+        if (account == null)
+        {
+            throw new NotFoundAppException("Account", dto.AccountId);
+        }
+        Account? counterpartyAccount = null;
 
-        if (counterpartyAccount == null && dto.CounterpartyAccountId.HasValue)
-            return null;
+        if (dto.CounterpartyAccountId.HasValue)
+        {
+            counterpartyAccount = await accountRepository.GetByIdAsync(dto.CounterpartyAccountId.Value);
+            if (counterpartyAccount == null)
+            {
+                throw new NotFoundAppException("Account", dto.CounterpartyAccountId.Value);
+            }
+        }
             
+
         await unitOfWork.BeginTransactionAsync();
 
         try
@@ -32,6 +44,11 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
             else
                 result = await ProcessSingleTransactionAsync(dto, account);
 
+            if (result == null)
+            {
+                throw new ValidationAppException(new Dictionary<string, string>
+                    { { "Transaction", "Failed to create transaction" } });
+            }
             await unitOfWork.CommitAsync();
             return result;
         }
@@ -42,7 +59,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
         }
     }
 
-    private async Task<Guid[]> ProcessTransferAsync(CreateTransactionDto dto, AccountDto accountDto, AccountDto counterpartyDto)
+    private async Task<Guid[]?> ProcessTransferAsync(CreateTransactionDto dto, Account accountDto, Account counterpartyDto)
     {
         Account account = new() { Id = accountDto.Id, Balance = accountDto.Balance };
         Account counterparty = new() { Id = counterpartyDto.Id, Balance = counterpartyDto.Balance };
@@ -114,13 +131,25 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
             
         await unitOfWork.Transactions.CreateAsync(senderTransaction);
         await unitOfWork.Transactions.CreateAsync(receiverTransaction);
-        await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
-        await unitOfWork.Accounts.UpdatePartialAsync(counterparty, x => x.Balance);
 
-        return [receiverTransaction.Id, senderTransaction.Id];
+        var accountEntity = (await unitOfWork.Accounts.GetByIdAsync(account.Id))!;
+        accountEntity.Balance = account.Balance;
+        await unitOfWork.Accounts.Update(accountEntity);
+
+        var counterpartyEntity = (await unitOfWork.Accounts.GetByIdAsync(counterparty.Id))!;
+        counterpartyEntity.Balance = counterparty.Balance;
+        await unitOfWork.Accounts.Update(counterpartyEntity);
+
+        var totalBefore = accountDto.Balance + counterpartyDto.Balance;
+        var totalAfter = account.Balance + counterparty.Balance;
+
+        if (totalBefore == totalAfter) return [receiverTransaction.Id, senderTransaction.Id];
+        await unitOfWork.RollbackAsync();
+        return null;
+
     }
 
-    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, AccountDto accountDto)
+    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, Account accountDto)
     {
         var transaction = new Transaction
         {
@@ -140,7 +169,10 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork) : IRequestHandler<
             : account.Balance + dto.Value;
 
         await unitOfWork.Transactions.CreateAsync(transaction);
-        await unitOfWork.Accounts.UpdatePartialAsync(account, x => x.Balance);
+
+        var accountEntity = (await unitOfWork.Accounts.GetByIdAsync(account.Id))!;
+        accountEntity.Balance = account.Balance;
+        await unitOfWork.Accounts.Update(accountEntity);
 
         return [transaction.Id];
     }

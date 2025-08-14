@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Transactions.Dto;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
@@ -10,9 +11,11 @@ public class GetTransactionHandler(IRepository<Transaction> transactionRepositor
     public async Task<TransactionDto?> Handle(GetTransactionQuery request, CancellationToken cancellationToken)
     {
         var transaction = await transactionRepository.GetByIdAsync(request.Id);
-        return transaction == null 
-            ? null 
-            : new TransactionDto
+        if (transaction == null)
+        {
+            throw new NotFoundAppException("Transaction", request.Id);
+        }
+        return new TransactionDto
             {
                 TransactionId = transaction.Id,
                 AccountId = transaction.AccountId,

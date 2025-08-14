@@ -1,4 +1,5 @@
-﻿using bank_accounts.Features.Accounts.Entities;
+﻿using bank_accounts.Exceptions;
+using bank_accounts.Features.Accounts.Entities;
 using bank_accounts.Infrastructure.Repository;
 using MediatR;
 
@@ -8,10 +9,13 @@ public class UpdateAccountHandler(IRepository<Account> accountRepository) : IReq
 {
     public async Task<Guid> Handle(UpdateAccountCommand request, CancellationToken cancellationToken)
     {
-        await accountRepository.UpdatePartialAsync(
-            new Account { Id = request.AccountId, InterestRate = request.UpdateAccountDto.InterestRate },
-            x => x.InterestRate
-        );
+        var account = await accountRepository.GetByIdAsync(request.AccountId);
+        if (account == null)
+        {
+            throw new NotFoundAppException("Account", request.AccountId);
+        }
+        account.InterestRate = request.UpdateAccountDto.InterestRate;
+        await accountRepository.Update(account);
 
         await accountRepository.SaveChangesAsync();
 

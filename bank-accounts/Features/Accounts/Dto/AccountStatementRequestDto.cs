@@ -12,7 +12,7 @@ public class AccountStatementRequestDto
     public DateTime StartDate { get; set; }
 
     /// <summary>
-    /// Конечная дата периода выписки (невключительно)
+    /// Конечная дата периода выписки (не включительно)
     /// </summary>
     /// <remarks>
     /// Должна быть больше StartDate.

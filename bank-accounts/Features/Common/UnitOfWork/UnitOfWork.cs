@@ -1,9 +1,10 @@
 ﻿using bank_accounts.Features.Accounts.Entities;
+using bank_accounts.Features.Outbox.Entities;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace bank_accounts.Features.Transactions;
+namespace bank_accounts.Features.Common.UnitOfWork;
 
 public class UnitOfWork : IUnitOfWork
 {
@@ -13,12 +14,14 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(AppDbContext context)
     {
         _context = context;
+        OutboxMessages = new EfRepository<OutboxMessage>(_context);
         Accounts = new EfRepository<Account>(_context);
         Transactions = new EfRepository<Transaction>(_context);
     }
 
     public IRepository<Account> Accounts { get; }
     public IRepository<Transaction> Transactions { get; }
+    public IRepository<OutboxMessage> OutboxMessages { get; }
 
     public async Task BeginTransactionAsync()
     {

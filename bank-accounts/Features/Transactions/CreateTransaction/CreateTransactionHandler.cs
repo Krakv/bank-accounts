@@ -1,5 +1,8 @@
 ﻿using bank_accounts.Exceptions;
 using bank_accounts.Features.Accounts.Entities;
+using bank_accounts.Features.Common.UnitOfWork;
+using bank_accounts.Features.Outbox;
+using bank_accounts.Features.Outbox.Payloads;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.Entities;
 using bank_accounts.Infrastructure.Repository;
@@ -27,30 +30,73 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
                 throw new NotFoundAppException("Account", dto.CounterpartyAccountId.Value);
             }
         }
-            
 
         await unitOfWork.BeginTransactionAsync();
 
         try
         {
-            Guid[]? result;
-            if (dto.CounterpartyAccountId.HasValue)
+            Transaction[] result;
+            if (dto.CounterpartyAccountId.HasValue && counterpartyAccount != null)
             {
-                if (counterpartyAccount != null)
-                    result = await ProcessTransferAsync(dto, account, counterpartyAccount);
-                else
-                    result = null;
+                result = await ProcessTransferAsync(dto, account, counterpartyAccount);
+
+                var payload = new TransferCompletedPayload
+                {
+                    SourceAccountId = result[1].AccountId,
+                    DestinationAccountId = result[0].AccountId,
+                    Amount = result[0].Value,
+                    Currency = result[0].Currency,
+                    TransferId = result[1].Id
+                };
+
+                var outboxMessage = OutboxMessageFactory.Create(payload.EventId, "MoneyTransferCompleted", payload, payload.Meta.Source, payload.Meta.CorrelationId, payload.Meta.CausationId);
+
+                await unitOfWork.OutboxMessages.CreateAsync(outboxMessage);
+                await unitOfWork.OutboxMessages.SaveChangesAsync();
             }
             else
+            {
                 result = await ProcessSingleTransactionAsync(dto, account);
 
-            if (result == null)
-            {
-                throw new ValidationAppException(new Dictionary<string, string>
-                    { { "Transaction", "Failed to create transaction" } });
+                switch (result[0].Type)
+                {
+                    case "Credit":
+                    {
+                        var payload = new MoneyCreditedPayload
+                        {
+                            AccountId = result[0].AccountId,
+                            Amount = result[0].Value,
+                            Currency = result[0].Currency,
+                            OperationId = result[0].Id
+                        };
+                        var outboxMessage = OutboxMessageFactory.Create(payload.EventId, "MoneyCredited", payload,
+                            payload.Meta.Source, payload.Meta.CorrelationId, payload.Meta.CausationId);
+
+                        await unitOfWork.OutboxMessages.CreateAsync(outboxMessage);
+                        await unitOfWork.OutboxMessages.SaveChangesAsync();
+                        break;
+                    }
+
+                    case "Debit":
+                    {
+                        var payload = new MoneyDebitedPayload
+                        {
+                            AccountId = result[0].AccountId,
+                            Amount = result[0].Value,
+                            Currency = result[0].Currency,
+                            OperationId = result[0].Id,
+                            Reason = result[0].Description
+                        };
+                        var outboxMessage = OutboxMessageFactory.Create(payload.EventId, "MoneyDebited", payload, payload.Meta.Source, payload.Meta.CorrelationId, payload.Meta.CausationId);
+
+                        await unitOfWork.OutboxMessages.CreateAsync(outboxMessage);
+                        await unitOfWork.OutboxMessages.SaveChangesAsync();
+                        break;
+                    }
+                }
             }
             await unitOfWork.CommitAsync();
-            return result;
+            return result.Select(x => x.Id).ToArray();
         }
         catch (Exception)
         {
@@ -59,7 +105,7 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
         }
     }
 
-    private async Task<Guid[]?> ProcessTransferAsync(CreateTransactionDto dto, Account accountDto, Account counterpartyDto)
+    private async Task<Transaction[]> ProcessTransferAsync(CreateTransactionDto dto, Account accountDto, Account counterpartyDto)
     {
         Account account = new() { Id = accountDto.Id, Balance = accountDto.Balance };
         Account counterparty = new() { Id = counterpartyDto.Id, Balance = counterpartyDto.Balance };
@@ -143,13 +189,11 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
         var totalBefore = accountDto.Balance + counterpartyDto.Balance;
         var totalAfter = account.Balance + counterparty.Balance;
 
-        if (totalBefore == totalAfter) return [receiverTransaction.Id, senderTransaction.Id];
-        await unitOfWork.RollbackAsync();
-        return null;
-
+        if (totalBefore == totalAfter) return [receiverTransaction, senderTransaction];
+        throw new InvalidOperationException("Failed to create transaction");
     }
 
-    private async Task<Guid[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, Account accountDto)
+    private async Task<Transaction[]> ProcessSingleTransactionAsync(CreateTransactionDto dto, Account accountDto)
     {
         var transaction = new Transaction
         {
@@ -174,6 +218,6 @@ public class CreateTransactionHandler(IUnitOfWork unitOfWork, IRepository<Accoun
         accountEntity.Balance = account.Balance;
         await unitOfWork.Accounts.Update(accountEntity);
 
-        return [transaction.Id];
+        return [transaction];
     }
 }

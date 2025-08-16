@@ -18,9 +18,10 @@ services:
       - ConnectionStrings__HangfireConnection=Host=postgres;Port=5432;Database=hangfire;Username=postgres;Password=postgres
       - RabbitMQ__HostName=rabbitmq
     depends_on:
-      - postgres
-      - keycloak
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - account-service-network
       
@@ -69,6 +70,11 @@ services:
       - rabbit_config
     networks:
       - account-service-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
 secrets:
   rabbit_config:

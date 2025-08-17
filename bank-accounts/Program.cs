@@ -14,7 +14,9 @@ using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RabbitMQ.Client;
@@ -105,6 +107,10 @@ builder.Services.AddSwaggerGen(options =>
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     options.IncludeXmlComments(xmlPath);
 });
+builder.Services.AddHealthChecks()
+    .AddCheck("live_check", () => HealthCheckResult.Healthy("Service is alive"), tags: ["live"])
+    .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"])
+    .AddRabbitMQ(name: "rabbitmq_ready", tags: ["ready", "messaging"]);
 
 builder.Services.AddOpenApi();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
@@ -156,6 +162,8 @@ app.UseAuthorization();
 app.UseCors("AllowAll");
 app.MapGet("/index.html", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 app.MapControllers();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions

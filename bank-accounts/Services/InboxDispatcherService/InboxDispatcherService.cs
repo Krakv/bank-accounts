@@ -85,17 +85,17 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
         }
         catch (JsonException ex)
         {
-            logger.LogError(ex, "JSON deserialization error.");
+            logger.LogWarning(ex, "JSON deserialization error.");
             await QuarantineMessageAsync(message, ex.Message);
         }
         catch (ValidationAppException ex)
         {
-            logger.LogError(ex, "Validation error occurred.");
+            logger.LogWarning(ex, "Validation error occurred. Errors: {Errors}", JsonSerializer.Serialize(ex.Errors));
             await QuarantineMessageAsync(message, ex.Message);
         }
         catch(DbUpdateException ex)
         {
-            logger.LogError(ex, "The entry in the database already exists.");
+            logger.LogWarning(ex, "The entry in the database already exists.");
             await QuarantineMessageAsync(message, ex.Message);
         }
         catch (Exception ex)

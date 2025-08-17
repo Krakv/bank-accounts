@@ -3,4 +3,4 @@ using MediatR;
 
 namespace bank_accounts.Features.Accounts.UnfrozeClientAccounts;
 
-public record UnfrozeClientAccountsCommand(Guid ClientId, ClientBlockingPayload? EventPayload = null) : IRequest;
+public record UnfrozeClientAccountsCommand(Guid ClientId, ClientBlockingPayload? EventPayload = null) : IRequest<bool>;

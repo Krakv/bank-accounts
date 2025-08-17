@@ -5,9 +5,9 @@ using MediatR;
 
 namespace bank_accounts.Features.Accounts.UnfrozeClientAccounts;
 
-public class UnfrozeClientAccountsHandler(IUnitOfWork unitOfWork) : IRequestHandler<UnfrozeClientAccountsCommand>
+public class UnfrozeClientAccountsHandler(IUnitOfWork unitOfWork) : IRequestHandler<UnfrozeClientAccountsCommand, bool>
 {
-    public async Task Handle(UnfrozeClientAccountsCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(UnfrozeClientAccountsCommand request, CancellationToken cancellationToken)
     {
         await unitOfWork.BeginTransactionAsync();
         try
@@ -38,6 +38,8 @@ public class UnfrozeClientAccountsHandler(IUnitOfWork unitOfWork) : IRequestHand
             await unitOfWork.Accounts.SaveChangesAsync();
 
             await unitOfWork.CommitAsync();
+
+            return accounts.Count != 0;
         }
         catch (Exception)
         {

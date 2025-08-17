@@ -112,6 +112,12 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"])
     .AddRabbitMQ(name: "rabbitmq_ready", tags: ["ready", "messaging"]);
 
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+    options.SingleLine = true;
+});
+
 builder.Services.AddOpenApi();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json;
-using bank_accounts.Exceptions;
 using bank_accounts.Features.Accounts.FrozeClientAccounts;
 using bank_accounts.Features.Accounts.UnfrozeClientAccounts;
 using bank_accounts.Features.Inbox.Entities;
@@ -18,109 +17,75 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
     public async Task ConsumeMessages()
     {
         var channel = await rabbitMqConnection.CreateChannelAsync();
-        await channel.QueueDeclareAsync("account.antifraud", exclusive:false, durable:true, autoDelete:false, arguments: null);
-
+        await channel.QueueDeclareAsync("account.antifraud", exclusive: false, durable: true, autoDelete: false, arguments: null);
         await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 1, global: false);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
-
         consumer.ReceivedAsync += async (_, ea) =>
         {
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            var routingKey = ea.RoutingKey;
-            await HandleReceivedMessage(message, routingKey);
-            await channel.BasicAckAsync(ea.DeliveryTag, false);
+            try
+            {
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                await HandleMessageSafeAsync(message, ea.RoutingKey);
+                await channel.BasicAckAsync(ea.DeliveryTag, false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Message processing failed");
+            }
         };
 
-        await channel.BasicConsumeAsync(queue: "account.antifraud", autoAck:false, consumer: consumer);
+        await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer);
     }
 
-    private async Task HandleReceivedMessage(string? message, string routingKey)
+    private async Task HandleMessageSafeAsync(string message, string routingKey)
     {
         using var scope = scopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        if (string.IsNullOrEmpty(message))
-        {
-            logger.LogWarning("Received message is empty.");
-            return;
-        }
-
         try
         {
+            var payload = JsonSerializer.Deserialize<ClientBlockingPayload>(message)
+                ?? throw new JsonException("Payload is null");
+
             switch (routingKey)
             {
                 case "client.blocked":
-                {
-                    var blockingPayload = JsonSerializer.Deserialize<ClientBlockingPayload>(message);
-                    if (blockingPayload == null)
-                    {
-                        logger.LogWarning("Unable to read payload. Message skipped.");
-                    }
-                    else
-                    {
-                        await mediator.Send(new FrozeClientAccountsCommand(blockingPayload.ClientId, blockingPayload));
-                        logger.LogInformation("client.blocked event published.");
-                    }
-
+                    await mediator.Send(new FrozeClientAccountsCommand(payload.ClientId, payload));
                     break;
-                }
                 case "client.unblocked":
-                {
-                    var blockingPayload = JsonSerializer.Deserialize<ClientBlockingPayload>(message);
-                    if (blockingPayload == null)
-                    {
-                        logger.LogWarning("Unable to read payload. Message skipped.");
-                    }
-                    else
-                    {
-                        await mediator.Send(new UnfrozeClientAccountsCommand(blockingPayload.ClientId, blockingPayload));
-                        logger.LogInformation("client.unblocked event published.");
-                    }
-
+                    await mediator.Send(new UnfrozeClientAccountsCommand(payload.ClientId, payload));
                     break;
-                }
+                default:
+                    throw new NotSupportedException($"Unknown routing key: {routingKey}");
             }
+
+            logger.LogInformation("Processed {RoutingKey} for client {ClientId}", routingKey, payload.ClientId);
         }
         catch (JsonException ex)
         {
-            logger.LogWarning(ex, "JSON deserialization error.");
-            await QuarantineMessageAsync(message, ex.Message);
+            await QuarantineMessageAsync(message, $"Invalid JSON: {ex.Message}");
+            throw;
         }
-        catch (ValidationAppException ex)
+        catch (DbUpdateException ex)
         {
-            logger.LogWarning(ex, "Validation error occurred. Errors: {Errors}", JsonSerializer.Serialize(ex.Errors));
-            await QuarantineMessageAsync(message, ex.Message);
-        }
-        catch(DbUpdateException ex)
-        {
-            logger.LogWarning(ex, "The entry in the database already exists.");
-            await QuarantineMessageAsync(message, ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unexpected error.");
+            logger.LogWarning(ex, "Message already processed: {Error}", ex.Message);
         }
     }
 
-    private async Task QuarantineMessageAsync(string? payload, string errorMessage)
+    private async Task QuarantineMessageAsync(string payload, string error)
     {
         using var scope = scopeFactory.CreateScope();
-        var inboxDeadRepository = scope.ServiceProvider.GetRequiredService<IRepository<InboxDeadMessage>>();
+        var repo = scope.ServiceProvider.GetRequiredService<IRepository<InboxDeadMessage>>();
 
-        var deadMessage = new InboxDeadMessage
+        await repo.CreateAsync(new InboxDeadMessage
         {
             Id = Guid.NewGuid(),
-            ReceivedAt = DateTime.UtcNow,
+            Payload = payload,
             Handler = nameof(QuarantineMessageAsync),
-            Payload = payload ?? "",
-            Error = errorMessage
-        };
-
-        await inboxDeadRepository.CreateAsync(deadMessage);
-
-        logger.LogInformation("Message went to quarantine.");
+            Error = error,
+            ReceivedAt = DateTime.UtcNow
+        });
     }
-
 }

@@ -7,6 +7,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace bank_accounts.Features.Transactions;
 
@@ -45,62 +47,68 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
     /// <response code="500">Внутренняя ошибка сервера</response>
     [HttpPost]
 	[ProducesResponseType(typeof(MbResult<List<Guid>>), StatusCodes.Status201Created)]
-	public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
-	{
-		try
-		{
-			var transactionIds = await mediator.Send(new CreateTransactionCommand(dto));
+    public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionDto dto)
+    {
+        const string endpoint = nameof(CreateTransaction);
+        var stopwatch = Stopwatch.StartNew();
 
-			var successResult = new MbResult<Guid[]>(
-				"Transaction created successfully",
-				StatusCodes.Status201Created,
-				transactionIds
-			);
+        try
+        {
+            logger.LogInformation("Request started | Endpoint: {Endpoint} | AccountId: {AccountId} | Amount: {Amount}", endpoint, dto.AccountId, dto.Value);
 
-			return CreatedAtAction(
-				nameof(GetTransaction),
-				new { id = transactionIds[0] },
-				successResult
-			);
-		}
+            var transactionIds = await mediator.Send(new CreateTransactionCommand(dto));
+
+            logger.LogInformation("Request succeeded | Endpoint: {Endpoint} | Duration: {Duration}ms | TransactionIds: {TransactionIds}", endpoint, stopwatch.ElapsedMilliseconds, string.Join(",", transactionIds));
+
+            var result = new MbResult<Guid[]>(
+                "Transaction created successfully",
+                StatusCodes.Status201Created,
+                transactionIds
+            );
+
+            return CreatedAtAction(nameof(GetTransaction), new { id = transactionIds[0] }, result);
+        }
         catch (ValidationAppException ex)
-		{
-			var result = new MbResult<object>(
-				"Validation errors occurred",
-				StatusCodes.Status400BadRequest,
-				ex.Errors
-			);
-			return BadRequest(result);
-		}
+        {
+            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+
+            return BadRequest(new MbResult<object>(
+                "Validation errors occurred",
+                StatusCodes.Status400BadRequest,
+                ex.Errors
+            ));
+        }
         catch (DbUpdateConcurrencyException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Concurrency conflict | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
+
+            return Conflict(new MbResult<object>(
                 "Account was updated by another request",
                 StatusCodes.Status409Conflict,
-                new Dictionary<string, string>{ {"AccountId", ex.Message} }
-                );
-            return Conflict(result);
+                new Dictionary<string, string> { { "AccountId", ex.Message } }
+            ));
         }
         catch (FrozenAccountException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex,"Frozen account | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
+
+            return Conflict(new MbResult<object>(
                 "Account was frozen",
                 StatusCodes.Status409Conflict,
                 new Dictionary<string, string> { { "AccountId", ex.Message } }
-            );
-            return Conflict(result);
+            ));
         }
         catch (Exception ex)
-		{
-			logger.LogError(ex, "Error creating transaction");
-			var result = new MbResult<object>(
-				"Internal server error",
-				StatusCodes.Status500InternalServerError,
-				new Dictionary<string, string> { { "Error", "An unexpected error occurred while creating transaction" } }
-			);
-			return StatusCode(500, result);
-		}
-	}
+        {
+            logger.LogError(ex, "Request failed | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
+                "Internal server error",
+                StatusCodes.Status500InternalServerError,
+                new Dictionary<string, string> { { "Error", ex.Message } }
+            ));
+        }
+    }
 
     /// <summary>
     /// Получить информацию о транзакции по ID
@@ -115,46 +123,54 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
     /// <response code="500">Ошибка сервера</response>
     [HttpGet("{id:guid}")]
 	[ProducesResponseType(typeof(MbResult<TransactionDto>), StatusCodes.Status200OK)]
-	public async Task<IActionResult> GetTransaction(Guid id)
-	{
-		try
-		{
-			var transaction = await mediator.Send(new GetTransactionQuery(id), CancellationToken.None);
+    public async Task<IActionResult> GetTransaction(Guid id)
+    {
+        const string endpoint = nameof(GetTransaction);
+        var stopwatch = Stopwatch.StartNew();
 
-			var successResult = new MbResult<TransactionDto>(
-				"Transaction retrieved successfully",
-				StatusCodes.Status200OK,
-				transaction
-			);
-			return Ok(successResult);
+        try
+        {
+            logger.LogDebug("Request started | Endpoint: {Endpoint} | TransactionId: {TransactionId}", endpoint, id);
+
+            var transaction = await mediator.Send(new GetTransactionQuery(id));
+
+            logger.LogInformation("Request succeeded | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<TransactionDto>(
+                "Transaction retrieved successfully",
+                StatusCodes.Status200OK,
+                transaction
+            ));
         }
         catch (ValidationAppException ex)
-		{
-			var result = new MbResult<object>(
-				"Validation errors occurred",
-				StatusCodes.Status400BadRequest,
-				ex.Errors
-			);
-			return BadRequest(result);
-		}
+        {
+            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+
+            return BadRequest(new MbResult<object>(
+                "Validation errors occurred",
+                StatusCodes.Status400BadRequest,
+                ex.Errors
+            ));
+        }
         catch (NotFoundAppException ex)
         {
-            var notFoundResult = new MbResult<object>(
+            logger.LogWarning(ex, "Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
+
+            return NotFound(new MbResult<object>(
                 ex.Message,
                 StatusCodes.Status404NotFound,
                 new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
-            );
-            return NotFound(notFoundResult);
+            ));
         }
         catch (Exception ex)
-		{
-			logger.LogError(ex, "Error getting transaction");
-			var result = new MbResult<object>(
-				"Internal server error",
-				StatusCodes.Status500InternalServerError,
-				new Dictionary<string, string> { { "Error", "An unexpected error occurred while retrieving transaction" } }
-			);
-			return StatusCode(500, result);
-		}
-	}
+        {
+            logger.LogError(ex, "Request failed | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
+                "Internal server error",
+                StatusCodes.Status500InternalServerError,
+                new Dictionary<string, string> { { "Error", ex.Message } }
+            ));
+        }
+    }
 }

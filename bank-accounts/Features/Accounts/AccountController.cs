@@ -13,6 +13,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace bank_accounts.Features.Accounts;
 
@@ -40,9 +42,16 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<Guid>), 201)]
     public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto createAccountDto)
     {
+        const string endpoint = nameof(CreateAccount);
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
-            var id = await mediator.Send(new CreateAccountCommand(createAccountDto), CancellationToken.None);
+            logger.LogInformation("Request started | Endpoint: {Endpoint} | OwnerId: {OwnerId} | Currency: {Currency}", endpoint, createAccountDto.OwnerId, createAccountDto.Currency);
+
+            var id = await mediator.Send(new CreateAccountCommand(createAccountDto));
+
+            logger.LogInformation("Request succeeded | Endpoint: {Endpoint} | Duration: {Duration}ms | AccountId: {AccountId}", endpoint, stopwatch.ElapsedMilliseconds, id);
 
             var result = new MbResult<Guid>(
                 "Account created successfully",
@@ -50,30 +59,27 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
                 id
             );
 
-            return CreatedAtAction(
-                nameof(GetAccount),
-                new { id },
-                result
-            );
+            return CreatedAtAction(nameof(GetAccount), new { id }, result);
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex,"Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to Post new Account.");
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Request failed | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
-                new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+                new Dictionary<string, string> { { "Error", ex.Message } }
+            ));
         }
     }
 
@@ -101,44 +107,52 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<AccountDto>), 200)]
     public async Task<IActionResult> GetAccount(Guid id)
     {
+        const string endpoint = nameof(GetAccount);
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
-            var accountDto = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
+            logger.LogDebug("Request started | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, id);
 
-            var result = new MbResult<AccountDto>(
+            var accountDto = await mediator.Send(new GetAccountQuery(id));
+
+            logger.LogInformation("Request succeeded | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<AccountDto>(
                 "Account retrieved successfully",
                 StatusCodes.Status200OK,
                 accountDto
-            );
-            return Ok(result);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (NotFoundAppException ex)
         {
-            var notFoundResult = new MbResult<object>(
+            logger.LogWarning(ex, "Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
+
+            return NotFound(new MbResult<object>(
                 ex.Message,
                 StatusCodes.Status404NotFound,
                 new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
-            );
-            return NotFound(notFoundResult);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting account {Id}", id);
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Request failed | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
-                new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+                new Dictionary<string, string> { { "Error", ex.Message } }
+            ));
         }
     }
 
@@ -175,44 +189,52 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<AccountsDto>), 200)]
     public async Task<IActionResult> GetAccounts([FromQuery] AccountFilterDto filter)
     {
+        const string endpoint = nameof(GetAccounts);
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
-            var accountsResult = await mediator.Send(new GetAccountsQuery(filter), CancellationToken.None);
+            logger.LogDebug("Request started | Endpoint: {Endpoint} | Filter: {Filter}", endpoint, JsonSerializer.Serialize(filter));
 
-            var successResult = new MbResult<AccountsDto>(
+            var accountsResult = await mediator.Send(new GetAccountsQuery(filter));
+
+            logger.LogInformation("Request succeeded | Endpoint: {Endpoint} | Duration: {Duration}ms | Results: {Count}", endpoint, stopwatch.ElapsedMilliseconds, accountsResult.Accounts?.Count());
+
+            return Ok(new MbResult<AccountsDto>(
                 "Accounts retrieved successfully",
                 StatusCodes.Status200OK,
                 accountsResult
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (NotFoundAppException ex)
         {
-            var notFoundResult = new MbResult<object>(
+            logger.LogWarning(ex,"Not found | Endpoint: {Endpoint} | Entity: {Entity}", endpoint, ex.EntityName);
+
+            return NotFound(new MbResult<object>(
                 ex.Message,
                 StatusCodes.Status404NotFound,
                 new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
-            );
-            return NotFound(notFoundResult);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get filtered accounts");
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Request failed | Endpoint: {Endpoint} | Duration: {Duration}ms", endpoint, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
-                new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+                new Dictionary<string, string> { { "Error", ex.Message } }
+            ));
         }
     }
 
@@ -229,55 +251,64 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<object>), 200)]
     public async Task<IActionResult> UpdateAccountInterestRate(Guid id, [FromBody] UpdateAccountDto updateDto)
     {
+        const string endpoint = nameof(UpdateAccountInterestRate);
+        var stopwatch = Stopwatch.StartNew();
+        var logContext = new { Endpoint = endpoint, AccountId = id, UpdateDto = updateDto };
+
         try
         {
-            var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
+            logger.LogDebug("Update interest rate started | {Context}", logContext);
 
+            var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
             await mediator.Send(new UpdateAccountCommand(id, updateDto, account.Type), CancellationToken.None);
 
-            var successResult = new MbResult<Guid>(
+            logger.LogInformation( "Update interest rate succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<Guid>(
                 "Account updated successfully",
                 StatusCodes.Status200OK,
                 id
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex,"Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (NotFoundAppException ex)
         {
-            var notFoundResult = new MbResult<object>(
+            logger.LogWarning(ex, "Account not found | {Context} | Entity: {Entity}", logContext, ex.EntityName);
+
+            return NotFound(new MbResult<object>(
                 ex.Message,
                 StatusCodes.Status404NotFound,
                 new Dictionary<string, string> { { ex.EntityName ?? "Entity", ex.Message } }
-            );
-            return NotFound(notFoundResult);
+            ));
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning( ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Conflict(new MbResult<object>(
                 "Account was updated by another request",
                 StatusCodes.Status409Conflict,
                 ex.Message
-            );
-            return Conflict(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error updating interest rate for account {Id}", id);
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Update interest rate failed | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
                 new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+            ));
         }
     }
 
@@ -294,44 +325,53 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<object>), 200)]
     public async Task<IActionResult> CloseAccount(Guid id)
     {
+        const string endpoint = nameof(CloseAccount);
+        var stopwatch = Stopwatch.StartNew();
+        var logContext = new { Endpoint = endpoint, AccountId = id };
+
         try
         {
+            logger.LogDebug("Close account started | {Context}", logContext);
+
             await mediator.Send(new CloseAccountCommand(id), CancellationToken.None);
 
-            var successResult = new MbResult<Guid>(
+            logger.LogInformation("Close account succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<Guid>(
                 "Account closed successfully",
                 StatusCodes.Status200OK,
                 id
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Conflict(new MbResult<object>(
                 "Account was updated by another request",
                 StatusCodes.Status409Conflict,
                 ex.Message
-            );
-            return Conflict(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error closing account {Id}", id);
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Close account failed | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
                 new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+            ));
         }
     }
 
@@ -348,44 +388,53 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<object>), 200)]
     public async Task<IActionResult> DeleteAccount(Guid id)
     {
+        const string endpoint = nameof(DeleteAccount);
+        var stopwatch = Stopwatch.StartNew();
+        var logContext = new { Endpoint = endpoint, AccountId = id };
+
         try
         {
+            logger.LogDebug("Delete account started | {Context}", logContext);
+
             await mediator.Send(new DeleteAccountCommand(id), CancellationToken.None);
 
-            var successResult = new MbResult<Guid>(
+            logger.LogInformation("Delete account succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<Guid>(
                 "Account deleted successfully",
                 StatusCodes.Status200OK,
                 id
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Conflict(new MbResult<object>(
                 "Account was updated by another request",
                 StatusCodes.Status409Conflict,
                 ex.Message
-            );
-            return Conflict(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error closing account {Id}", id);
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Delete account failed | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
                 new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+            ));
         }
     }
 
@@ -402,36 +451,43 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<AccountStatementResponseDto>), 200)]
     public async Task<IActionResult> GetAccountStatement(Guid accountId, [FromQuery] AccountStatementRequestDto request)
     {
+        const string endpoint = nameof(GetAccountStatement);
+        var stopwatch = Stopwatch.StartNew();
+        var logContext = new { Endpoint = endpoint, AccountId = accountId, Request = request };
+
         try
         {
-            var statement = await mediator.Send(new GetAccountStatementQuery(accountId, request),
-                CancellationToken.None);
+            logger.LogDebug("Get account statement started | {Context}", logContext);
 
-            var successResult = new MbResult<AccountStatementResponseDto>(
+            var statement = await mediator.Send(new GetAccountStatementQuery(accountId, request), CancellationToken.None);
+
+            logger.LogInformation("Get account statement succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<AccountStatementResponseDto>(
                 "Account statement retrieved successfully",
                 StatusCodes.Status200OK,
                 statement
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting account statement");
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Get account statement failed | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
                 new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+            ));
         }
     }
 
@@ -448,36 +504,43 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
     [ProducesResponseType(typeof(MbResult<string>), 200)]
     public async Task<IActionResult> GetAccountStatementWithExplainAnalyze(Guid accountId, [FromQuery] AccountStatementRequestDto request)
     {
+        const string endpoint = nameof(GetAccountStatementWithExplainAnalyze);
+        var stopwatch = Stopwatch.StartNew();
+        var logContext = new { Endpoint = endpoint, AccountId = accountId, Request = request };
+
         try
         {
-            var statement = await mediator.Send(new GetAccountStatementAndExplainAnalyzeQuery(accountId, request),
-                CancellationToken.None);
+            logger.LogDebug("Get account statement with explain analyze started | {Context}", logContext);
 
-            var successResult = new MbResult<string>(
+            var statement = await mediator.Send(new GetAccountStatementAndExplainAnalyzeQuery(accountId, request), CancellationToken.None);
+
+            logger.LogInformation("Get account statement with explain analyze succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return Ok(new MbResult<string>(
                 "Account statement retrieved successfully",
                 StatusCodes.Status200OK,
                 statement
-            );
-            return Ok(successResult);
+            ));
         }
         catch (ValidationAppException ex)
         {
-            var result = new MbResult<object>(
+            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+
+            return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
                 StatusCodes.Status400BadRequest,
                 ex.Errors
-            );
-            return BadRequest(result);
+            ));
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error getting account statement");
-            var result = new MbResult<object>(
+            logger.LogError(ex, "Get account statement with explain analyze failed | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+
+            return StatusCode(500, new MbResult<object>(
                 "Internal server error",
                 StatusCodes.Status500InternalServerError,
                 new Dictionary<string, string> { { "Error", "An unexpected error occurred" } }
-            );
-            return StatusCode(500, result);
+            ));
         }
     }
 }

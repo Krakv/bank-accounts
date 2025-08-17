@@ -52,4 +52,10 @@ public record AccountDto
     /// </summary>
     /// <example>null</example>
     public DateTime? ClosingDate { get; init; }
+
+    /// <summary>
+    /// Флаг, отображающий состояние счета (заморожен/не заморожен)
+    /// </summary>
+    /// <example>false</example>
+    public bool IsFrozen { get; init; } = false;
 }

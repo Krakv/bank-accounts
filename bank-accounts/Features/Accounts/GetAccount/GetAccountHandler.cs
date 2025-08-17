@@ -26,7 +26,8 @@ public class GetAccountHandler(IRepository<Account> accountRepository) : IReques
                 Balance = account.Balance,
                 InterestRate = account.InterestRate,
                 OpeningDate = account.OpeningDate,
-                ClosingDate = account.ClosingDate
+                ClosingDate = account.ClosingDate,
+                IsFrozen = account.IsFrozen
             };
     }
 }

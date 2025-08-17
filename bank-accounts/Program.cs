@@ -4,7 +4,9 @@ using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
 using bank_accounts.Services.AccrueInterestService;
 using bank_accounts.Services.CurrencyService;
+using bank_accounts.Services.InboxDispatcherService;
 using bank_accounts.Services.OutboxDispatcherService;
+using bank_accounts.Services.RabbitMqBackgroundService;
 using bank_accounts.Services.VerificationService;
 using FluentValidation;
 using Hangfire;
@@ -115,6 +117,8 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBeh
 builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
 builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
 builder.Services.AddSingleton(rabbitMqConnection);
+builder.Services.AddSingleton<IInboxDispatcherService, InboxDispatcherService>();
+builder.Services.AddHostedService<RabbitMqBackgroundService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

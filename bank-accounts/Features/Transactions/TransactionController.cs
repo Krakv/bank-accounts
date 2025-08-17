@@ -81,6 +81,15 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
                 );
             return Conflict(result);
         }
+        catch (FrozenAccountException ex)
+        {
+            var result = new MbResult<object>(
+                "Account was frozen",
+                StatusCodes.Status409Conflict,
+                new Dictionary<string, string> { { "AccountId", ex.Message } }
+            );
+            return Conflict(result);
+        }
         catch (Exception ex)
 		{
 			logger.LogError(ex, "Error creating transaction");

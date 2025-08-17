@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using System.Data;
+using bank_accounts.Features.Inbox.Entities;
 
 namespace bank_accounts.Infrastructure.Repository;
 
@@ -16,6 +17,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Transaction> Transactions { get; set; }
     [UsedImplicitly]
     public DbSet<OutboxMessage> Outbox { get; set; }
+    [UsedImplicitly]
+    public DbSet<InboxConsumedMessage> InboxConsumed { get; set; }
+    [UsedImplicitly]
+    public DbSet<InboxDeadMessage> InboxDead { get; set; }
 
     [UsedImplicitly]
     public async Task<IDbContextTransaction> BeginTransactionAsync()

@@ -11,6 +11,8 @@ public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository
 {
     public async Task PublishPendingMessages()
     {
+        logger.LogInformation("Outbox messages have started publishing.");
+
         await using var channel = await rabbitMqConnection.CreateChannelAsync();
         await channel.ExchangeDeclareAsync("account.events", ExchangeType.Topic, durable: true);
 
@@ -40,7 +42,9 @@ public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository
 
                 message.ProcessedAt = DateTime.UtcNow;
 
-                await outboxRepository.Update(message);
+                await outboxRepository.SaveChangesAsync();
+
+                logger.LogInformation("Outbox message with id={EventId} have been published.", message.Id);
             }
             catch (Exception ex)
             {
@@ -48,6 +52,5 @@ public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository
                 throw;
             }
         }
-
     }
 }

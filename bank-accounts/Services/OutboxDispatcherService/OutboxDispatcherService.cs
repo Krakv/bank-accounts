@@ -8,12 +8,12 @@ using static System.Text.RegularExpressions.Regex;
 
 namespace bank_accounts.Services.OutboxDispatcherService;
 
-public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository, IConnection rabbitMqConnection, ILogger<OutboxDispatcherService> logger) : IOutboxDispatcherService
+public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository, ConnectionFactory connectionFactory, ILogger<OutboxDispatcherService> logger) : IOutboxDispatcherService
 {
     public async Task PublishPendingMessages()
     {
         logger.LogInformation("Outbox messages have started publishing.");
-
+        await using var rabbitMqConnection = await connectionFactory.CreateConnectionAsync();
         await using var channel = await rabbitMqConnection.CreateChannelAsync();
         await channel.ExchangeDeclareAsync("account.events", ExchangeType.Topic, durable: true);
 

@@ -26,7 +26,6 @@ using System.Reflection;
 var builder = WebApplication.CreateBuilder(args);
 
 var keycloakConfig = builder.Configuration.GetSection("Keycloak");
-var rabbitMqConnection = await new ConnectionFactory { HostName = builder.Configuration.GetSection("RabbitMQ")["HostName"] ?? "localhost" }.CreateConnectionAsync();
 
 builder.Services.AddControllers();
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -128,9 +127,23 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
 builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
-builder.Services.AddSingleton(rabbitMqConnection);
 builder.Services.AddSingleton<IInboxDispatcherService, InboxDispatcherService>();
 builder.Services.AddHostedService<RabbitMqBackgroundService>();
+builder.Services.AddSingleton(_ =>
+{
+    var config = builder.Configuration.GetSection("RabbitMQ");
+    return new ConnectionFactory
+    {
+        HostName = config["HostName"] ?? "localhost",
+        AutomaticRecoveryEnabled = true,
+        NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
+    };
+});
+builder.Services.AddSingleton<IConnection>(sp =>
+{
+    var factory = sp.GetRequiredService<ConnectionFactory>();
+    return factory.CreateConnectionAsync().Result;
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

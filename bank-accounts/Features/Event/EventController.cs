@@ -20,7 +20,7 @@ namespace bank_accounts.Features.Event;
 [Route("[controller]")]
 [ApiController]
 [Authorize]
-public class EventController(IMediator mediator, ILogger<EventController> logger, IConnection rabbitMqConnection) : ControllerBase
+public class EventController(IMediator mediator, ILogger<EventController> logger, ConnectionFactory connectionFactory) : ControllerBase
 {
     /// <summary>
     /// Получить список необработанных сообщений (dead letters)
@@ -169,6 +169,7 @@ public class EventController(IMediator mediator, ILogger<EventController> logger
     public async Task<IActionResult> BlockClient([FromBody] ClientBlockingPayload payload)
     {
         await PublishMessage("client.blocked", payload);
+        logger.LogInformation("Block event sent for client {ClientId}", payload.ClientId);
         return Ok($"Block event sent for client {payload.ClientId}");
     }
 
@@ -190,6 +191,7 @@ public class EventController(IMediator mediator, ILogger<EventController> logger
     public async Task<IActionResult> UnblockClient([FromBody] ClientBlockingPayload payload)
     {
         await PublishMessage("client.unblocked", payload);
+        logger.LogInformation("Unblock event sent for client {ClientId}", payload.ClientId);
         return Ok($"Unblock event sent for client {payload.ClientId}");
     }
 
@@ -197,6 +199,8 @@ public class EventController(IMediator mediator, ILogger<EventController> logger
     {
         try
         {
+
+            await using var rabbitMqConnection = await connectionFactory.CreateConnectionAsync();
             await using var channel = await rabbitMqConnection.CreateChannelAsync();
 
             await channel.ExchangeDeclareAsync(

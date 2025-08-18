@@ -23,6 +23,7 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
         var consumer = new AsyncEventingBasicConsumer(channel);
         consumer.ReceivedAsync += async (_, ea) =>
         {
+            logger.LogInformation("GOTCHA!!!");
             try
             {
                 var body = ea.Body.ToArray();
@@ -35,7 +36,7 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
                 logger.LogError(ex, "Message processing failed");
             }
         };
-
+        logger.LogInformation("STARTED_TO_CONSUME!!!");
         await channel.BasicConsumeAsync("account.antifraud", autoAck: false, consumer);
     }
 
@@ -53,15 +54,15 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
             {
                 case "client.blocked":
                     await mediator.Send(new FrozeClientAccountsCommand(payload.ClientId, payload));
+                    logger.LogInformation("Client {ClientId} was frozen.", payload.ClientId);
                     break;
                 case "client.unblocked":
                     await mediator.Send(new UnfrozeClientAccountsCommand(payload.ClientId, payload));
+                    logger.LogInformation("Client {ClientId} was unfrozen.", payload.ClientId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown routing key: {routingKey}");
             }
-
-            logger.LogInformation("Processed {RoutingKey} for client {ClientId}", routingKey, payload.ClientId);
         }
         catch (JsonException ex)
         {
@@ -70,6 +71,7 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
         }
         catch (DbUpdateException ex)
         {
+            await QuarantineMessageAsync(message, $"Message already processed: {ex.Message}");
             logger.LogWarning(ex, "Message already processed: {Error}", ex.Message);
         }
     }

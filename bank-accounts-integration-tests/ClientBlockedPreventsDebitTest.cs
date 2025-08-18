@@ -1,5 +1,7 @@
 ﻿using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Common;
+using bank_accounts.Features.Inbox;
+using bank_accounts.Features.Inbox.Payloads;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Infrastructure.Repository;
 using Hangfire;
@@ -9,19 +11,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
+using static bank_accounts_integration_tests.ParallelTransferTests;
 
 namespace bank_accounts_integration_tests;
 
-public class ParallelTransferTests : IAsyncLifetime
+public class ClientBlockedPreventsDebitTest : IAsyncLifetime
 {
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
@@ -30,14 +29,15 @@ public class ParallelTransferTests : IAsyncLifetime
         .WithDatabase("bankaccounts")
         .WithUsername("postgres")
         .WithPassword("postgres")
-        .WithPortBinding(5433, 5432)
+        .WithPortBinding(5435, 5432)
         .Build();
 
     private readonly RabbitMqContainer _rmqContainer = new RabbitMqBuilder()
         .WithImage("rabbitmq:4.1.3-management")
         .WithUsername("guest")
         .WithPassword("guest")
-        .WithPortBinding(5673, 5672)
+        .WithPortBinding(5675, 5672)
+        .WithPortBinding(15673, 15672)
         .WithResourceMapping("RabbitMq/definitions.json", "/etc/rabbitmq/definitions.json")
         .WithEnvironment("RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS", "-rabbitmq_management load_definitions \"/etc/rabbitmq/definitions.json\"")
         .Build();
@@ -99,35 +99,26 @@ public class ParallelTransferTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Fifty_Parallel_Transfers_Should_Keep_Total_Balance()
+    public async Task ClientBlockedPreventsDebit()
     {
         // Arrange
-        var acc1 = await CreateAccount(10000);
-        var acc2 = await CreateAccount(10000);
-        var totalBefore = await GetTotalBalance();
+        var clientId = Guid.NewGuid();
+        var accountId = await CreateAccount(clientId);
+        await BlockClient(clientId);
+        await Task.Delay(5000);
 
         // Act
-        var tasks = Enumerable.Range(0, 50).Select(_ => Transfer(acc1, acc2, 10));
-        var enumerable = tasks.ToList();
-        await Task.WhenAll(enumerable);
+        var statusCode = await MakeDebitTransaction(accountId);
 
         // Assert
-        var totalAfter = await GetTotalBalance();
-        Assert.Equal(totalBefore, totalAfter);
-        Assert.All(enumerable, task =>
-        {
-            Assert.True(
-                task.Result.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.Created,
-                $"Unexpected status code: {task.Result.StatusCode}"
-            );
-        });
+        Assert.Equal(HttpStatusCode.Conflict, statusCode);
     }
 
-    private async Task<Guid> CreateAccount(decimal balance)
+    private async Task<Guid> CreateAccount(Guid clientId)
     {
         var dto = new CreateAccountDto
         {
-            OwnerId = Guid.NewGuid(),
+            OwnerId = clientId,
             Type = "Checking",
             Currency = "USD"
         };
@@ -141,7 +132,7 @@ public class ParallelTransferTests : IAsyncLifetime
             CounterpartyAccountId = null,
             Type = "Credit",
             Currency = "USD",
-            Value = balance
+            Value = 100
         };
         var transResp = await _client.PostAsJsonAsync("/transactions", transactionDto);
         transResp.EnsureSuccessStatusCode();
@@ -149,44 +140,38 @@ public class ParallelTransferTests : IAsyncLifetime
         return result.Value;
     }
 
-    private async Task<HttpResponseMessage> Transfer(Guid from, Guid to, decimal amount)
+    private async Task BlockClient(Guid clientId)
     {
-        var dto = new CreateTransactionDto
+        var dto = new ClientBlockingPayload()
         {
-            AccountId = from,
-            CounterpartyAccountId = to,
-            Type = "Debit",
-            Value = amount,
-            Currency = "USD"
+            EventId = Guid.NewGuid(),
+            ClientId = clientId,
+            OccuredAt = DateTime.UtcNow,
+            Meta = new Meta
+            {
+                CausationId = Guid.NewGuid(),
+                CorrelationId = Guid.NewGuid(),
+                Source = "account.events",
+                Version = "v1"
+            }
         };
-
-        return await _client.PostAsJsonAsync("/transactions", dto);
-    }
-
-    private async Task<decimal> GetTotalBalance()
-    {
-        var resp = await _client.GetAsync("/accounts");
+        var resp = await _client.PostAsJsonAsync("/event/block-client", dto);
         resp.EnsureSuccessStatusCode();
-        var result = (await resp.Content.ReadFromJsonAsync<MbResult<AccountsDto>>())!;
-
-        if (result.Value is { Accounts: not null })
-        {
-            return result.Value.Accounts.Sum(a => a.Balance);
-        }
-
-        throw new Exception("Result has no data.");
     }
 
-    public class TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
-        : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    private async Task<HttpStatusCode> MakeDebitTransaction(Guid accountId)
     {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        var transactionDto = new CreateTransactionDto
         {
-            var principal = new ClaimsPrincipal(new ClaimsIdentity("Bearer"));
-            var ticket = new AuthenticationTicket(principal, "Bearer");
+            AccountId = accountId,
+            CounterpartyAccountId = null,
+            Type = "Debit",
+            Currency = "USD",
+            Value = 50
+        };
+        var transResp = await _client.PostAsJsonAsync("/transactions", transactionDto);
 
-            return Task.FromResult(AuthenticateResult.Success(ticket));
-        }
+        return transResp.StatusCode;
     }
 
     public class TestApplicationFactory<TStartup> : WebApplicationFactory<TStartup> where TStartup : class

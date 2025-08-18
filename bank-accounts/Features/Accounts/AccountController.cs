@@ -63,7 +63,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex,"Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+            logger.LogWarning("Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -126,7 +126,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+            logger.LogWarning("Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -136,7 +136,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (NotFoundAppException ex)
         {
-            logger.LogWarning(ex, "Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
+            logger.LogWarning("Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
 
             return NotFound(new MbResult<object>(
                 ex.Message,
@@ -208,7 +208,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+            logger.LogWarning("Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -218,7 +218,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (NotFoundAppException ex)
         {
-            logger.LogWarning(ex,"Not found | Endpoint: {Endpoint} | Entity: {Entity}", endpoint, ex.EntityName);
+            logger.LogWarning("Not found | Endpoint: {Endpoint} | Entity: {Entity}", endpoint, ex.EntityName);
 
             return NotFound(new MbResult<object>(
                 ex.Message,
@@ -262,7 +262,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
             var account = await mediator.Send(new GetAccountQuery(id), CancellationToken.None);
             await mediator.Send(new UpdateAccountCommand(id, updateDto, account.Type), CancellationToken.None);
 
-            logger.LogInformation( "Update interest rate succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+            logger.LogInformation("Update interest rate succeeded | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
 
             return Ok(new MbResult<Guid>(
                 "Account updated successfully",
@@ -272,7 +272,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex,"Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+            logger.LogWarning("Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -282,7 +282,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (NotFoundAppException ex)
         {
-            logger.LogWarning(ex, "Account not found | {Context} | Entity: {Entity}", logContext, ex.EntityName);
+            logger.LogWarning("Account not found | {Context} | Entity: {Entity}", logContext, ex.EntityName);
 
             return NotFound(new MbResult<object>(
                 ex.Message,
@@ -292,7 +292,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            logger.LogWarning( ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+            logger.LogWarning("Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
 
             return Conflict(new MbResult<object>(
                 "Account was updated by another request",
@@ -345,7 +345,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+            logger.LogWarning("Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -355,7 +355,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            logger.LogWarning(ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+            logger.LogWarning("Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
 
             return Conflict(new MbResult<object>(
                 "Account was updated by another request",
@@ -408,7 +408,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+            logger.LogWarning("Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -418,7 +418,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            logger.LogWarning(ex, "Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
+            logger.LogWarning("Concurrency conflict | {Context} | Duration: {Duration}ms", logContext, stopwatch.ElapsedMilliseconds);
 
             return Conflict(new MbResult<object>(
                 "Account was updated by another request",
@@ -471,7 +471,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+            logger.LogWarning("Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -524,7 +524,7 @@ public class AccountsController(ILogger<AccountsController> logger, IMediator me
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
+            logger.LogWarning("Validation failed | {Context} | Errors: {Errors}", logContext, ex.Errors);
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",

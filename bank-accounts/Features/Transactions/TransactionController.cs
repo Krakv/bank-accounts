@@ -70,7 +70,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+            logger.LogWarning("Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -80,7 +80,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
         }
         catch (DbUpdateConcurrencyException ex)
         {
-            logger.LogWarning(ex, "Concurrency conflict | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
+            logger.LogWarning("Concurrency conflict | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
 
             return Conflict(new MbResult<object>(
                 "Account was updated by another request",
@@ -90,7 +90,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
         }
         catch (FrozenAccountException ex)
         {
-            logger.LogWarning(ex,"Frozen account | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
+            logger.LogWarning("Frozen account | Endpoint: {Endpoint} | AccountId: {AccountId}", endpoint, dto.AccountId);
 
             return Conflict(new MbResult<object>(
                 "Account was frozen",
@@ -144,7 +144,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
         }
         catch (ValidationAppException ex)
         {
-            logger.LogWarning(ex, "Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
+            logger.LogWarning("Validation failed | Endpoint: {Endpoint} | Errors: {Errors}", endpoint, JsonSerializer.Serialize(ex.Errors));
 
             return BadRequest(new MbResult<object>(
                 "Validation errors occurred",
@@ -154,7 +154,7 @@ public class TransactionsController(IMediator mediator, ILogger<TransactionsCont
         }
         catch (NotFoundAppException ex)
         {
-            logger.LogWarning(ex, "Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
+            logger.LogWarning("Not found | Endpoint: {Endpoint} | Entity: {Entity} | Id: {Id}", endpoint, ex.EntityName, id);
 
             return NotFound(new MbResult<object>(
                 ex.Message,

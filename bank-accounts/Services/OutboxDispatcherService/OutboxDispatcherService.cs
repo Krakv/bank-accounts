@@ -54,16 +54,16 @@ public class OutboxDispatcherService(IRepository<OutboxMessage> outboxRepository
                     await outboxRepository.SaveChangesAsync();
                     success = true;
 
-                    logger.LogInformation("Event published | EventId:{EventId} | Type:{Type} | Latency:{Latency}ms | Retry:{Retry}", message.Id, message.Type, stopwatch.ElapsedMilliseconds, retryCount - 1);
+                    logger.LogInformation("Event published | EventId:{EventId} | CorrelationId:{CorrelationId} | Type:{Type} | Latency:{Latency}ms | Retry:{Retry}", message.Id, message.CorrelationId, message.Type, stopwatch.ElapsedMilliseconds, retryCount - 1);
                 }
                 catch (Exception ex) when (retryCount < 3)
                 {
-                    logger.LogWarning(ex, "Publish attempt failed | EventId:{EventId} | Retry:{Retry} | Error:{Error}", message.Id, retryCount, ex.Message);
+                    logger.LogWarning("Publish attempt failed | EventId:{EventId} | CorrelationId:{CorrelationId} | Retry:{Retry} | Error:{Error}", message.Id, message.CorrelationId, retryCount, ex.Message);
                     await Task.Delay(500 * retryCount);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Publish failed after {MaxRetries} attempts | EventId:{EventId} | Error:{Error}", 3, message.Id, ex.ToString());
+                    logger.LogError(ex, "Publish failed after {MaxRetries} attempts | EventId:{EventId} | CorrelationId:{CorrelationId} | Error:{Error}", 3, message.Id, message.CorrelationId, ex.ToString());
                     break;
                 }
             } while (!success && retryCount < 3);

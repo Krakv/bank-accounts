@@ -142,7 +142,7 @@ public class ClientBlockedPreventsDebitTest : IAsyncLifetime
 
     private async Task BlockClient(Guid clientId)
     {
-        var dto = new ClientBlockingPayload()
+        var dto = new ClientBlockingPayload
         {
             EventId = Guid.NewGuid(),
             ClientId = clientId,

@@ -69,10 +69,10 @@ public class InboxDispatcherService(ILogger<InboxDispatcherService> logger, ICon
             await QuarantineMessageAsync(message, $"Invalid JSON: {ex.Message}");
             throw;
         }
-        catch (DbUpdateException ex)
+        catch (DbUpdateException)
         {
-            await QuarantineMessageAsync(message, $"Message already processed: {ex.Message}");
-            logger.LogWarning(ex, "Message already processed: {Error}", ex.Message);
+            await QuarantineMessageAsync(message, "Message already processed");
+            logger.LogWarning("Message with id={EventId} already processed ", JsonSerializer.Deserialize<ClientBlockingPayload>(message)!.EventId);
         }
     }
 

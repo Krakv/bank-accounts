@@ -4,6 +4,7 @@ using bank_accounts.Infrastructure.Repository;
 using bank_accounts.Services.CurrencyService;
 using FluentValidation;
 using JetBrains.Annotations;
+using System.Security.Principal;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
@@ -68,6 +69,10 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
         if (counterparty == null)
         {
             throw new NotFoundAppException("Account", command.CreateTransactionDto.CounterpartyAccountId!.Value);
+        }
+        if (counterparty.IsFrozen)
+        {
+            throw new FrozenAccountException(command.CreateTransactionDto.CounterpartyAccountId!.Value);
         }
         return counterparty.Currency == currency;
     }

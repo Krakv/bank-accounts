@@ -16,9 +16,12 @@ services:
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=bankaccounts;Username=postgres;Password=postgres
       - ConnectionStrings__HangfireConnection=Host=postgres;Port=5432;Database=hangfire;Username=postgres;Password=postgres
+      - RabbitMQ__HostName=rabbitmq
     depends_on:
-      - postgres
-      - keycloak
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - account-service-network
       
@@ -54,8 +57,32 @@ services:
     networks:
       - account-service-network
 
+  rabbitmq:
+    image: rabbitmq:4.1.3-management
+    ports: 
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-rabbitmq_management load_definitions "/run/secrets/rabbit_config"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    secrets:
+      - rabbit_config
+    networks:
+      - account-service-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+secrets:
+  rabbit_config:
+    file: ./rabbitmq/rabbit_7360ac5c70b5_2025-8-14.json
+
 volumes:
   postgres_data:
+  rabbitmq_data: 
 
 networks:
   account-service-network:

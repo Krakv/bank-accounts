@@ -12,6 +12,18 @@
 
 В swagger доступен endpoint, который возвращает результат анализа запроса получения выписки по счету. (Обычно он возвращает результат поиска с использованием индекса GiST по дате. Составной индекс (AccountId, Date) удается применить, только если удалить индекс по дате).
 
+## RabbitMQ
+
+RabbitMQ UI доступен по адресу localhost: `http://localhost:15672`. Login: guest. Password: guest.
+
+## Проверка сохраненных сообщений для RabbitMQ
+
+Event контроллер позволит получить список записей в Outbox, InboxConsumed, InboxDeadLetters таблицах. Для тестирования блокирования клиента, есть 2 endpoint для блокировки и разблокировки.
+
+## Важная информация по интеграционным тестам
+
+Интеграционные тесты могут упасть из-за работающих приложений в докере, которые автоматически запущенны Visual Studio для bank-accounts (rabbitmq, postgres...).
+
 ## Пошаговая инструкция запуска
 
 ### Запуск с docker compose
@@ -32,6 +44,7 @@ docker-compose up -d --build
 **Требования:**
 - PostgreSQL запущена на `localhost:5432`
 - Keycloak доступен на `http://localhost:8080`
+- RabbitMq доступен на `http://localhost:5672`
 
 *Требуется конфигурация, используемая в docker-compose.*
 
@@ -57,10 +70,192 @@ dotnet run --project bank-accounts
 - `MediatR` для CQRS
 - `FluentValidation`
 - `EF Core` + `PostgreSQL`
+- `RabbitMQ`
+- `Keycloak`
 
 ## REST API
 
 Полное описание доступно в Swagger.
+
+## Формат сообщений для rabbitmq
+
+### Outbox
+
+#### Outbox сообщения хранятся в таблице Outbox со следующей структурой:
+
+```sql
+CREATE TABLE "Outbox" (
+    "Id" UUID PRIMARY KEY,
+    "Type" VARCHAR(255) NOT NULL,
+    "Payload" JSONB NOT NULL,
+    "OccurredAt" TIMESTAMP NOT NULL,
+    "ProcessedAt" TIMESTAMP NULL,
+    "Source" VARCHAR(100) NOT NULL,
+    "CorrelationId" UUID NOT NULL,
+    "CausationId" UUID NOT NULL
+);
+```
+#### Базовый формат Outbox cообщения (таблица):
+```json
+{
+  "Id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Type": "AccountOpened",
+  "Payload": {
+    "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "OccuredAt": "2023-10-25T14:30:45.123Z",
+    "Meta": {
+      "Version": "v1",
+      "Source": "account-service",
+      "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    },
+    // Специфичные поля события
+    "AccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "OwnerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "Currency": "USD",
+    "Type": "Savings"
+  },
+  "OccurredAt": "2023-10-25T14:30:45.123Z",
+  "ProcessedAt": null,
+  "Source": "account-service",
+  "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+
+#### Формат Outbox Payload (сообщение rabbitmq) для разных типов событий:
+AccountOpened:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "account-service",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "AccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OwnerId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Currency": "USD",
+  "Type": "Savings"
+}
+```
+InterestAccrued:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "account-service",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "AccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "PeriodFrom": "2023-10-01",
+  "PeriodTo": "2023-10-31",
+  "Amount": 15.75
+}
+```
+MoneyCredited:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "account-service",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "AccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Amount": 100.00,
+  "Currency": "USD",
+  "OperationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+MoneyDebited:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "account-service",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "AccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Amount": 50.00,
+  "Currency": "USD",
+  "OperationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Reason": "Monthly fee"
+}
+```
+TransferCompleted:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "account-service",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "SourceAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "DestinationAccountId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "Amount": 200.00,
+  "Currency": "USD",
+  "TransferId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+
+### Inbox
+
+#### Базовый формат Inbox cообщения (таблица)
+
+1. Обработанные сообщения (inbox_consumed)
+```json
+{
+  "Id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "ProcessedAt": "2023-10-25T14:30:45.123Z",
+  "Handler": "ClientBlockingHandler"
+}
+```
+2. Некорректные сообщения (inbox_dead_letters)
+```json
+{
+  "Id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "ReceivedAt": "2023-10-25T14:30:45.123Z",
+  "Handler": "ClientBlockingHandler",
+  "Payload": "{ /* оригинальное сообщение */ }",
+  "Error": "Ошибка валидации: поле ClientId обязательно"
+}
+```
+#### Формат Inbox Payload (сообщение rabbitmq)
+
+ClientBlockingPayload:
+
+```json
+{
+  "EventId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "OccuredAt": "2023-10-25T14:30:45.123Z",
+  "Meta": {
+    "Version": "v1",
+    "Source": "client.events",
+    "CorrelationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "CausationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  },
+  "ClientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
 
 ## Функции
 

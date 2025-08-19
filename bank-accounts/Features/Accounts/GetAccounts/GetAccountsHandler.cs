@@ -34,7 +34,8 @@ public class GetAccountsHandler(IRepository<Account> accountRepository) : IReque
             Balance = account.Balance,
             InterestRate = account.InterestRate,
             OpeningDate = account.OpeningDate,
-            ClosingDate = account.ClosingDate
+            ClosingDate = account.ClosingDate,
+            IsFrozen = account.IsFrozen
         });
 
         var result = new AccountsDto

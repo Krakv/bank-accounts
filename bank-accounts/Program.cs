@@ -1,8 +1,12 @@
-using bank_accounts.Features.Transactions;
+using bank_accounts;
+using bank_accounts.Features.Common.UnitOfWork;
 using bank_accounts.Infrastructure.Repository;
 using bank_accounts.PipelineBehaviors;
-using bank_accounts.Services.CurrencyService;
 using bank_accounts.Services.AccrueInterestService;
+using bank_accounts.Services.CurrencyService;
+using bank_accounts.Services.InboxDispatcherService;
+using bank_accounts.Services.OutboxDispatcherService;
+using bank_accounts.Services.RabbitMqBackgroundService;
 using bank_accounts.Services.VerificationService;
 using FluentValidation;
 using Hangfire;
@@ -10,11 +14,13 @@ using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using RabbitMQ.Client;
 using System.Reflection;
-using bank_accounts;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -100,16 +106,44 @@ builder.Services.AddSwaggerGen(options =>
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     options.IncludeXmlComments(xmlPath);
 });
+builder.Services.AddHealthChecks()
+    .AddCheck("live_check", () => HealthCheckResult.Healthy("Service is alive"), tags: ["live"])
+    .AddDbContextCheck<AppDbContext>(name: "database", tags: ["ready"])
+    .AddRabbitMQ(name: "rabbitmq_ready", tags: ["ready", "messaging"]);
+
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "[yyyy-MM-dd HH:mm:ss] ";
+    options.SingleLine = true;
+});
 
 builder.Services.AddOpenApi();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAccrueInterestService, AccrueInterestService>();
+builder.Services.AddScoped<IOutboxDispatcherService, OutboxDispatcherService>();
 builder.Services.AddMediatR(cf => cf.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddSingleton<IVerificationService, StubVerificationService>();
 builder.Services.AddSingleton<ICurrencyService, StubCurrencyService>();
+builder.Services.AddSingleton<IInboxDispatcherService, InboxDispatcherService>();
+builder.Services.AddHostedService<RabbitMqBackgroundService>();
+builder.Services.AddSingleton(_ =>
+{
+    var config = builder.Configuration.GetSection("RabbitMQ");
+    return new ConnectionFactory
+    {
+        HostName = config["HostName"] ?? "localhost",
+        AutomaticRecoveryEnabled = true,
+        NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
+    };
+});
+builder.Services.AddSingleton<IConnection>(sp =>
+{
+    var factory = sp.GetRequiredService<ConnectionFactory>();
+    return factory.CreateConnectionAsync().Result;
+});
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -147,6 +181,8 @@ app.UseAuthorization();
 app.UseCors("AllowAll");
 app.MapGet("/index.html", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = check => check.Tags.Contains("live") }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 app.MapControllers();
 
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -157,6 +193,9 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
     }
 });
 
+RecurringJob.AddOrUpdate<IOutboxDispatcherService>("outbox-dispatcher",
+    x => x.PublishPendingMessages(),
+    "*/10 * * * * *");
 RecurringJob.AddOrUpdate<IAccrueInterestService>("accrue-deposit-interest", 
     x => x.AccrueInterestForAllAccountsAsync(),
     "0 0 * * *");

@@ -1,7 +1,7 @@
 ﻿using bank_accounts.Features.Accounts.CreateAccount;
 using bank_accounts.Features.Accounts.Dto;
 using bank_accounts.Features.Accounts.GetAccount;
-using bank_accounts.Features.Transactions;
+using bank_accounts.Features.Common.UnitOfWork;
 using bank_accounts.Features.Transactions.CreateTransaction;
 using bank_accounts.Features.Transactions.Dto;
 using bank_accounts.Features.Transactions.GetTransaction;

@@ -130,6 +130,8 @@ public class AccountFilterDto : Filter<Account>
         if (AccountIds?.Count > 0)
             query = query.Where(a => AccountIds.Contains(a.Id));
 
+        query = query.OrderBy(a => a.OpeningDate);
+
         return query;
     }
 }

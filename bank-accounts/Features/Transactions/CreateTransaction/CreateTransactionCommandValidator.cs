@@ -4,6 +4,7 @@ using bank_accounts.Infrastructure.Repository;
 using bank_accounts.Services.CurrencyService;
 using FluentValidation;
 using JetBrains.Annotations;
+using System.Security.Principal;
 
 namespace bank_accounts.Features.Transactions.CreateTransaction;
 
@@ -24,13 +25,20 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
             .NotEmpty()
             .WithMessage("Account Id is required");
 
+        When(x => x.CreateTransactionDto.Type == "Debit", () =>
+        {
+            RuleFor(x => x.CreateTransactionDto.Value)
+                .MustAsync(BalanceCheck)
+                .WithMessage("Insufficient funds for debit transaction");
+        });
+
         When(x => x.CreateTransactionDto.CounterpartyAccountId.HasValue, () =>
         {
             RuleFor(x => x.CreateTransactionDto.Currency)
                 .MustAsync(CurrencyCheck)
                 .WithMessage("Currency must match between accounts");
 
-            When(x => x.CreateTransactionDto.Type is "Credit" or "Debit", () =>
+            When(x => x.CreateTransactionDto.Type == "Credit", () =>
             {
                 RuleFor(x => x.CreateTransactionDto.Value)
                     .MustAsync(BalanceCheck)
@@ -48,6 +56,10 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
         {
             throw new NotFoundAppException("Account", command.CreateTransactionDto.AccountId);
         }
+        if (account.IsFrozen)
+        {
+            throw new FrozenAccountException(command.CreateTransactionDto.AccountId);
+        }
         return account.Balance >= value;
     }
 
@@ -57,6 +69,10 @@ public class CreateTransactionCommandValidator : AbstractValidator<CreateTransac
         if (counterparty == null)
         {
             throw new NotFoundAppException("Account", command.CreateTransactionDto.CounterpartyAccountId!.Value);
+        }
+        if (counterparty.IsFrozen)
+        {
+            throw new FrozenAccountException(command.CreateTransactionDto.CounterpartyAccountId!.Value);
         }
         return counterparty.Currency == currency;
     }

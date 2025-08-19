@@ -1,5 +1,5 @@
-﻿using System.Data;
-using bank_accounts.Features.Common;
+﻿using bank_accounts.Features.Common;
+using bank_accounts.Features.Outbox.Dto;
 using Microsoft.EntityFrameworkCore;
 
 namespace bank_accounts.Infrastructure.Repository;
@@ -19,7 +19,7 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
         return await _dbSet.FindAsync(guid);
     }
 
-    public async Task<(IEnumerable<TEntity> data, int totalCount)> GetFilteredAsync<TFilter>(TFilter filter) where TFilter : Filter<TEntity>
+    public async Task<(List<TEntity> data, int totalCount)> GetFilteredAsync<TFilter>(TFilter filter) where TFilter : Filter<TEntity>
     {
         var query = _dbSet.AsQueryable();
 
@@ -51,14 +51,18 @@ public class EfRepository<TEntity>(AppDbContext context) : IRepository<TEntity> 
         await context.SaveChangesAsync();
     }
 
-    public async Task AccrueInterestAsync(Guid accountId)
+    public async Task<InterestAccruedDto?> AccrueInterestAsync(Guid accountId)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
-
-        await context.Database.ExecuteSqlRawAsync(
-            "CALL accrue_interest({0})", accountId
-        );
-
-        await transaction.CommitAsync();
+        return await context.Database.SqlQueryRaw<InterestAccruedDto>(
+                """
+                SELECT 
+                  account_id AS "AccountId",
+                  period_from AS "PeriodFrom",
+                  period_to AS "PeriodTo",
+                  amount AS "Amount"
+                FROM accrue_interest({0})
+                """,
+                accountId)
+            .FirstOrDefaultAsync();
     }
 }

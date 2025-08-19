@@ -19,6 +19,7 @@ public class Account : IEntity
     public decimal? InterestRate { get; set; }
     public DateTime OpeningDate { get; set; } = DateTime.UtcNow;
     public DateTime? ClosingDate { get; set; }
+    public bool IsFrozen { get; set; } = false;
 
     [UsedImplicitly]
     [Timestamp]

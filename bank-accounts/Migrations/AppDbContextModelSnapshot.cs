@@ -18,9 +18,6 @@ namespace bank_accounts.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.8")
-                .HasAnnotation("Proxies:ChangeTracking", false)
-                .HasAnnotation("Proxies:CheckEquality", false)
-                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -44,6 +41,9 @@ namespace bank_accounts.Migrations
 
                     b.Property<decimal?>("InterestRate")
                         .HasColumnType("numeric");
+
+                    b.Property<bool>("IsFrozen")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("OpeningDate")
                         .HasColumnType("timestamp with time zone");
@@ -69,6 +69,95 @@ namespace bank_accounts.Migrations
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("OwnerId"), "HASH");
 
                     b.ToTable("Accounts");
+                });
+
+            modelBuilder.Entity("bank_accounts.Features.Inbox.Entities.InboxConsumedMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Handler")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("inbox_consumed");
+                });
+
+            modelBuilder.Entity("bank_accounts.Features.Inbox.Entities.InboxDeadMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Handler")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("inbox_dead_letters");
+                });
+
+            modelBuilder.Entity("bank_accounts.Features.Outbox.Entities.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CausationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProcessedAt")
+                        .HasFilter("\"ProcessedAt\" IS NULL");
+
+                    b.ToTable("Outbox");
                 });
 
             modelBuilder.Entity("bank_accounts.Features.Transactions.Entities.Transaction", b =>
